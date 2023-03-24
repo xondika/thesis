@@ -11,21 +11,17 @@ This seemingly basic task contains many interesting subproblems, including but n
 the high level design of the robot, hardware design and programming, image or speech recognition, and human computer interaction.
 For us, the critical part will be performing the task itself; in this case, computing and realising the movement necessary to grab a cup and deliver it to the target location.
 
-\section{The setup}
+A natural way for us to approach the problem is to create a humanoid robot, or simply a robotic arm on a fixed base. Even if we limit ourselves to the latter, the idea is quite fascinating; outside of making coffee for computer scientists, it can assist engineers or surgeons in their work.
 
 This thesis aims to create a general algorithm for controlling robotic arms.
-The assumption we are going with is that we have a robotic arm that is fixed in place and has a high number of joints.
+Our assumption is that we have a robotic arm that is fixed in place and has a high number of joints.
 Naturally, the joints on the arm will have limited range, as many real arms do.
 The task we are aiming to accomplish is to plan movement of the arm from one place to another, while avoiding collisions with other objects in the workspace of the arm.
 The performed movement should be reasonably efficient, and the computation needs to be fast.
 
 The presented methods will not be limited to a specific setup, but the results will be demostrated on top of the RoFI platform\cite{rofiPlatform}.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Motivation}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-As computer scientists, we can already sense that we are tackling a rather complex problem, which is yet to be solved by the robotic community. Obstacles and joint constraints generally make the problem of motion planning hard to perform, and the task of finding a good solution often goes directly against the task of finding a solution quickly.
+As computer scientists, we can already sense that we are tackling a rather complex problem, which is yet to be solved by the robotic community. Obstacles and joint constraints generally make the problem of motion planning\footnote{The general problem of computing the motion of a robot. It encompasses robotic arms as well as self driving cars and walking robots.} hard to perform, and the task of finding a good solution often goes directly against the task of finding a solution quickly.
 There are many existing attempts to create an algorithm for motion planning of robotic arms,
 some of which have been successfully used in practice to perform a specific task. Each method has specific advantages and disadvantages, which will be discussed in further chapters of this thesis.
 
@@ -33,7 +29,7 @@ What mostly sets our goals apart from previous research is the assumption that w
 Being unable to use a single existing method will lead us to decomposing the problem into smaller parts and combining various algorithms from different areas. By the end, we hope to build a satisfiable solution, starting with each component from the ground up.
 
 Outside of robotics, having a general algorithm with this specification is interesting for computer graphics, in particular for generating character movement in videogames.
-If we have an algorithm that can compute the motion of a constrained limb with a high number of joints, we can apply it to complex kinematic models and animate movement of various characters in complex environments.
+With an algorithm that can compute the motion of a constrained limb with a high number of joints at our disposal, we can design complex kinematic models and animate movement of the respective characters in complex environments.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Outline of the work}
