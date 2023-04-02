@@ -195,7 +195,7 @@ The other branch of inverse kinematics algorithms are heuristic techniques. Thes
 
 The simplest of these methods is Cyclic Coordinate Descent (CCD)~\cite{ccd}. This algorithm iteratively goes through the joints of the manipulator, starting at the end effector, and turns each of them so that the distance to the target is locally minimized. Once it reaches the base, it starts iterating from the end again, until the end effector is close enough to the target (see Figure~\ref{fig:ccd}). This algorithm is fast, scales well, and in an unconstrained system, it always finds a solution, if one exists. However, the reached positions are very unnatural, which can lead to collisions with the environment, or even the manipulator itself. If we add obstacles or joint limits, the algorithm is also susceptible to local minima.
 
-The state of the art method for inverse kinematics is the heuristic algorithm FABRIK:\@Forward and Backward Reaching Inverse Kinematics~\cite{fabrik}.
+The state of the art method for inverse kinematics is the heuristic algorithm FABRIK:\ Forward and Backward Reaching Inverse Kinematics~\cite{fabrik}.
 The algorithm consists of simple geometric computations, which are very fast. Just like the CCD method, it always finds a solution in unconstrained systems, and scales very well. Unlike CCD, it converges significantly quicker and computes natural poses.
 
 \begin{figure}
@@ -279,7 +279,7 @@ Each body has a stepper motor that can turn from $-90$ to $90$ degrees. In our m
 \begin{wrapfigure}{r}{0.3\textwidth}
     \centering
     \includegraphics[width=0.3\textwidth]{um_connectors.png}
-  \caption{RoFI connectors~\cite{rofiUm}}\label{fig:um_rot}
+  \caption{RoFI connectors~\cite{rofiUm}}\label{fig:um_con}
 \end{wrapfigure}
 
 Each shoe has 3 connectors; we identify them via the shoe they're on and the direction they're facing with respect to the body. The connectors are genderless, which allows them to connect with any other connector within the plaform, and they can be retracted when not in use. Each connector is equipped with simple Lidar~\cite{Lidar} sensors. These perodically send out a laser that gets reflected off of nearby objects; this allows them to detect obstacles and estimate their distance based on how quickly the reflection returned. As a result, the modules don't have a full view of their environment, but each can locally detect nearby obstacles, as well as recognize whether there is another module they can connect to next to them.
