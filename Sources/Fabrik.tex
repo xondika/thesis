@@ -137,7 +137,7 @@ If the computed movement would cause a collision, a local limit is set on the cu
     \caption{Illustration of FABRIK with simple collision avoidance.}\label{fig:coll}
 \end{figure}
   
-Note that compared to the aforementioned collision avoidance method, this one only works locally for each joint. As a result, it can get stuck in a local minimum, and not get over an obstacle. This is a disadvantage if we wanted to use it to immediately find a final solution; the algorithm could fail even though a solution exists. On the other hand, this behavior is desirable if we are using it to repeatedly compute incremental changes; the manipulator doesn't jump over obstacles when the actual movement is not directly possible. Additionally, the manipulator does not need complete knowledge of the environment, and we don't need to rely on randomness, which saves a lot of computational time.
+Note that compared to the aforementioned collision avoidance method, this one only works locally for each joint. As a result, it can get stuck in a local minimum, and not get over an obstacle. This is a disadvantage if we wanted to use it to immediately find a final solution; the algorithm could fail even though a solution exists. On the other hand, this behavior is desirable if we are using it to repeatedly compute incremental changes; the manipulator doesn't jump over obstacles when the actual movement is not directly possible. Additionally, the manipulator does not need complete knowledge of the environment, and we don't need to rely on randomness, which saves computational time and guarantees faster convergence.
 
 As of now, we need to compare the new joint position with each other joint and each surrounding object in the workspace. Since other joints and obstacles are approximated with spheres, the collision check is very cheap: if the centers of two spheres are closer than the sum of their radii, the two spheres collide. However, checking every object is clearly asymptotically inefficient. Analog to doing lookup of strings or numbers in binary search trees, we would like to store our shapes in a structure that allows lookup with a logarithmic amount of comparisons.
 
@@ -162,7 +162,13 @@ Once a sibling has been chosen, the following operation proceeds:
 \item Recursively proceed to the root, increasing all the bounding boxes if necessary.
 \end{enumerate}
 
-A common heuristic for choosing where to insert the new leaf is to descend the tree starting from the root, always choosing the child in that will lead to smaller resizing of the tree. When we perform random insertions, the tree balances itself out quite evenly.
+\begin{figure}
+  \centering
+  \includegraphics[width=0.6\textwidth]{aabb_depth.png}
+  \caption{Graph of objects created at pseudorandom positions and the resulting depth of the tree.}\label{fig:aabb_depth}
+\end{figure}
+
+A common heuristic for choosing where to insert the new leaf is to descend the tree starting from the root, always choosing the child in that will lead to smaller resizing of the tree. When we perform random insertions, the tree balances itself out quite evenly (see Figure~\ref{fig:aabb_depth}).
 
 The payoff for building the data structure in this way is efficient lookup. When we need to check if a shape would collide with any other shape already in the structure, we do not need to compare it to every leaf. Instead, collision lookup proceeds from the root and only enters nodes with bounding boxes that collide with our shape. If the shape does not collide with either of the bounding boxes, we know that it does not collide with the leaves either, as the leaf shapes are contained within the nodes by definition. If it does collide with a bounding box, we check for the children, potentially getting to leaf nodes. Then, finally, collision with the actual object is checked.
 
