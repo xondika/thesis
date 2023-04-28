@@ -81,3 +81,49 @@ To follow the curve with our inverse kinematics algorithm, we need to choose the
 In cases where the \textit{end effector} moves independently from the rest of the manipulator, Spherical linear interpolation (SLERP)~\cite{slerp} between the initial and target rotations is a suitable solution. The method uses quaternions to perform rotation at a constant velocity, resulting in a smooth motion.
 
 Our case is a little different. In the case of RoFI manipulators, the rotation of the final module can influence how the entire manipulator needs to move, in order to accomodate for joint limits. Hence, we want to reach the target rotation as soon as possible. On the other hand, we need to consider that the target rotation may not be reachable immediately.
+
+There isn't a single best way of choosing the angle interpolation, since the inputs and targets can vary wildly. A method that performs reasonably well is to interpolate euler angles of the initial \textit{end effector} position and target with a quadratic function rather than a linear one. The reasoning behind this is that early targets for FABRIK have to be close to the initial position, but the target rotation is reached quickly and we don't make unnecessary movements.
+
+% Now that we've dealt with all the individual pieces, we have a complete algorithm.
+
+% Let us summarize the whole process. Our input parameters are a model of the environment, which includes obstacles and a single manipulator, and a target for the manipulator.
+
+% \begin{enumerate}
+% \item The environment within which the manipulator exists is loaded, and a kinematic model of the manipulator is created.
+% \item An AABB tree for collision checking is created, where the obstacles and joints are approximated via spheres.
+% \item A grid is created in the space the manipulator can move in. Each obstacle raises the cost on the surrounding points of the grid.
+% \item The shortest path on the weighted grid between the initial position of the \textit{end effector} and the target is found.
+% \item A trajectory is created by interpolating the found path with a B-spline.
+% \item The trajectory is sampled at discrete points, and an extension of FABRIK is used to compute the joint parameters needed to reach each of the points.
+% \item If the path can be followed successfully, the movement is realised. Otherwise, if FABRIK fails to find viable positions on this trajectory, the algorithm falls back to step 4, adjusts the grid, and tries to find a different path.
+% \end{enumerate}
+
+% We can now demostrate initial results within a RoFI simulator. As a baseline, we will consider a manipulator that consists of a chain of 4 modules, linked via the $-Z$ connectors. Since such a manipulator has 12 degrees of freedom, previous state of the art algorithms -- which only scale up to 6 -- would clearly not be useful.
+
+Now that we have all the pieces, we can run the algorithm and evaluate how good the paths found for the \textit{end effector} are.
+
+Let us start by visualizing the most basic case, to see if the produced motion is natural: the algorithm in a space with no obstacles.
+
+\begin{figure}
+  \centering
+  \begin{minipage}{\textwidth}
+    \includegraphics[width=0.3\textwidth]{sim1_0.png}
+    \includegraphics[width=0.3\textwidth]{sim1_1.png}
+    \includegraphics[width=0.3\textwidth]{sim1_2.png}
+
+    \includegraphics[width=0.3\textwidth]{sim1_3.png}
+    \includegraphics[width=0.3\textwidth]{sim1_4.png}
+    \includegraphics[width=0.3\textwidth]{sim1_5.png}
+  \end{minipage}
+  \caption{Our algorithm in a space with no obstacles.}\label{fig:sim1}
+\end{figure}
+
+As we can see in Figure~\ref{fig:sim1}, the found trajectory of the \textit{end effector} is smooth, including rotation. However, there is unnecessary motion before the manipulator adjusts itself into a straightened out position. Looking at the joints of the second and third module, they fold up during the algorithm, only to straighten themselves out again once the \textit{end effector} is closer to the target. We can reduce the amount of unnecessary motion by post-processing the calculated trajectory.
+
+The post-processing algorithm is trivial: starting at the initial position, we go through the computed positions for the manipulator, and check if we can
+
+current = initial
+next = 0
+while reachable (positions[next+1]):
+  next += 1
+current = positions[ next ]
