@@ -84,23 +84,23 @@ Our case is a little different. In the case of RoFI manipulators, the rotation o
 
 There isn't a single best way of choosing the angle interpolation, since the inputs and targets can vary wildly. A method that performs reasonably well is to interpolate euler angles of the initial \textit{end effector} position and target with a quadratic function rather than a linear one. The reasoning behind this is that early targets for FABRIK have to be close to the initial position, but the target rotation is reached quickly and we don't make unnecessary movements.
 
-% Now that we've dealt with all the individual pieces, we have a complete algorithm.
-
-% Let us summarize the whole process. Our input parameters are a model of the environment, which includes obstacles and a single manipulator, and a target for the manipulator.
-
-% \begin{enumerate}
-% \item The environment within which the manipulator exists is loaded, and a kinematic model of the manipulator is created.
-% \item An AABB tree for collision checking is created, where the obstacles and joints are approximated via spheres.
-% \item A grid is created in the space the manipulator can move in. Each obstacle raises the cost on the surrounding points of the grid.
-% \item The shortest path on the weighted grid between the initial position of the \textit{end effector} and the target is found.
-% \item A trajectory is created by interpolating the found path with a B-spline.
-% \item The trajectory is sampled at discrete points, and an extension of FABRIK is used to compute the joint parameters needed to reach each of the points.
-% \item If the path can be followed successfully, the movement is realised. Otherwise, if FABRIK fails to find viable positions on this trajectory, the algorithm falls back to step 4, adjusts the grid, and tries to find a different path.
-% \end{enumerate}
-
-% We can now demostrate initial results within a RoFI simulator. As a baseline, we will consider a manipulator that consists of a chain of 4 modules, linked via the $-Z$ connectors. Since such a manipulator has 12 degrees of freedom, previous state of the art algorithms -- which only scale up to 6 -- would clearly not be useful.
-
 Now that we have all the pieces, we can run the algorithm and evaluate how good the paths found for the \textit{end effector} are.
+
+\section{Optimising the manipulator trajectory}
+
+Let us summarize the entire computation. Our input parameters are a model of the environment -- obstacles and a single manipulator, and a target for the manipulator's \textit{end effector} to reach. The algorithm does the following, in order:
+
+\begin{enumerate}
+\item The environment within which the manipulator exists is loaded, and a kinematic model of the manipulator is created.
+\item An AABB tree for collision checking is created. The obstacles and joints are approximated via spheres and inserted into the tree.
+\item A grid is created in the space the manipulator can move in. Each obstacle raises the cost on the surrounding points of the grid.
+\item The shortest path on the weighted grid between the initial position of the \textit{end effector} and the target is found.
+\item The found path is smoothed out by interpolating the found points on the grid with a B-spline.
+\item The path is sampled at discrete points, and an extension of FABRIK is used to compute the joint parameters needed to reach each of the points.
+\item If the path can be followed successfully, the movement is realised. Otherwise, if FABRIK fails to find viable positions on this trajectory, the algorithm falls back to step 4, adjusts the grid, and tries to find a different path.
+\end{enumerate}
+
+We can now demostrate initial results within a RoFI simulator. As a baseline, we will consider a manipulator that consists of a chain of 4 modules, linked via the $-Z$ connectors. Since such a manipulator has 12 degrees of freedom, previous state of the art algorithms -- which only scale up to 6 -- would clearly not be useful.
 
 Let us start by visualizing the most basic case, to see if the produced motion is natural: the algorithm in a space with no obstacles.
 
@@ -120,10 +120,135 @@ Let us start by visualizing the most basic case, to see if the produced motion i
 
 As we can see in Figure~\ref{fig:sim1}, the found trajectory of the \textit{end effector} is smooth, including rotation. However, there is unnecessary motion before the manipulator adjusts itself into a straightened out position. Looking at the joints of the second and third module, they fold up during the algorithm, only to straighten themselves out again once the \textit{end effector} is closer to the target. We can reduce the amount of unnecessary motion by post-processing the calculated trajectory.
 
-The post-processing algorithm is trivial: starting at the initial position, we go through the computed positions for the manipulator, and check if we can
+Note that our found trajectory is a sequence of positions for the manipulator. The whole reason behind creating this complex algorithm rather than simply using inverse kinematics is that we cannot trivially interpolate between the initial and final positions, due to the obstacles in the way. However, this doesn't hold for all the intermediate steps in the calculated sequence. For each pair of positions, we can, via simple interpolation, check if the steps between them can be skipped, and the transition can be made directly. As a result, we can avoid intermediate positions where the manipulator folds itself up, only to readjust later on.
 
-current = initial
-next = 0
-while reachable (positions[next+1]):
-  next += 1
-current = positions[ next ]
+For each position in the sequence, the post-processing algorithm checks how far in the sequence it can get via interpolating the current and following positions directly. The farthest the algorithm can get at any point becomes the next target, and the computed intermediate positions are discarded. The shortcutting algorithm can easily be expressed via the following pseudocode~\ref{alg:opt}.
+
+\begin{algorithm}
+ \SetKwInOut{Input}{input}\SetKwInOut{Output}{output}
+ \Input{Sequence of manipulator positions $P[0..n]$}
+ \Output{Sequence of manipulator positions $O[0..m]$, $O \subseteq P$}
+
+ $O = [P[0]]$; // initial position of the algorithm
+
+ $idx = 1$;
+
+ \While{$idx < n$}{
+
+   \While{$idx < n \And P[idx + 1]$ can be reached from last position in $O$}{
+     $idx = idx + 1$;
+   }
+
+   add $P[idx]$ to $O$;
+
+ }
+
+\Return $O$\;
+
+\caption{Algorithm for shortcutting the found trajectory.}\label{alg:opt}
+\end{algorithm}
+
+Checking whether the target manipulator position is reachable from the current one is achieved by incrementally performing all the necessary rotations, and checking for collisions in the AABB.
+
+Looking back at our example, we can see that with shortcutting, the unnecessary movement of the manipulator's joints has been mitigated (Figure~\ref{fig:sim2}).
+
+\begin{figure}[h]
+  \centering
+  \begin{minipage}{\textwidth}
+    \includegraphics[width=0.19\textwidth]{sim2_1.png}
+    \includegraphics[width=0.19\textwidth]{sim2_2.png}
+    \includegraphics[width=0.19\textwidth]{sim2_3.png}
+    \includegraphics[width=0.19\textwidth]{sim2_4.png}
+    \includegraphics[width=0.19\textwidth]{sim2_5.png}
+  \end{minipage}
+  \caption{Our algorithm in a space with no obstacles, extended with trajectory shortcutting.}\label{fig:sim2}
+\end{figure}
+
+\clearpage
+
+\section{A more efficient representation of space}
+
+The algorithm is almost complete, but there is an issue we haven't addressed yet: usage of the grid to represent space.
+
+The first issue with this representation is inefficiency: even if a segment is free from obstacles, we represent it with a regularly spaced out grid, wasting memory and making our shortest path algorithm slower and harder to scale to larger manipulators.
+
+The second issue comes in the form of edge cases that are difficult to represent. If there are any obstacles smaller than the spacing of the grid, the algorithm can find paths that cause a collision. On the other hand, if there are large obstacles with small holes, the grid may not  find paths through the holes at all.
+
+As inspiration for how to represent the space, we can think back to visibility graphs~\ref{fig:vis}. However, as established earlier, we don't want to use the edges of objects as vertices.
+
+\begin{wrapfigure}{r}{0.4\textwidth}
+  \centering
+  \includegraphics[width=0.4\textwidth]{obstacle_paths.png}
+  \caption{3 relevant paths around a pair of obstacles.}
+\end{wrapfigure}
+
+Imagine a simple case of a manipulator trying to reach a target behind a pair of obstacles. The manipulator may either choose to go between them, around them from one side, or around them from the other. Therefore, for the purposes of representing this space, a simple graph is sufficient, instead of a complete grid. This graph has a vertex at the current \textit{end effector} position, a vertex at the target position, and 3 vertices surrounding the obstacles; one above, one below, and one between them. The 3 vertices need to be connected to both the initial and target positions.
+
+In 3 dimensions, building such a graph is a bit more complex. Even so, we can define general directions obstacles the path can lead around. We can borrow the idea from visibility graphs: for every pair of obstacles that can see each other, an interesting point on the graph is the point halfway between them\footnote{Unless the obstacles are so close to each other that the joints of the manipulator cannot fit between them. Then, it makes no sense to consider the vertex.}.
+
+Finding points between obstacles alone is not sufficient to represent all interesting paths -- we also want to look for paths that go around all the obstacles. Therefore, for the purposes of the algorithm, virtual obstacles are added at the edges of the manipulator's reach. Connecting these edges with nearby obstacles returns paths that lead around them, if they are within the manipulator's reach.
+
+\begin{figure}
+    \centering
+    \begin{subfigure}{.45\textwidth}
+      \includegraphics[width=0.99\textwidth]{ctrlgen_1_1.png}
+      \caption{Virtual obstacles are created at the edges of the manipulator's reach, and all obstacles are connected (dark blue lines).}
+    \end{subfigure}
+    \begin{subfigure}{0.45\textwidth}
+      \includegraphics[width=0.99\textwidth]{ctrlgen_1_2.png}
+      \caption{Points in between the obstacles become vertices of the graph (light blue squares).}
+    \end{subfigure}
+
+    \begin{subfigure}{.45\textwidth}
+      \includegraphics[width=0.99\textwidth]{ctrlgen_1_3.png}
+      \caption{Vertices that see each other are connected with edges (light blue lines).}
+    \end{subfigure}
+    \begin{subfigure}{0.45\textwidth}
+      \includegraphics[width=0.99\textwidth]{ctrlgen_1_4.png}
+      \caption{Example paths to the target in the created graph.}
+    \end{subfigure}
+    \caption{Illustration of how the graph representing the space is created and used to find a path to the target.}\label{fig:ctrlgen}
+  \end{figure}
+
+Just like visibility graphs, the vertices we create between obstacles are connected with an edge if they see each other, i.e.\ there are no obstacles between them.
+
+The implementation of two points being visible to each other can be done trivially with the use of our built AABB. We define a line segment that leads from one obstacle to the other, and if it collides with any other object, the objects are not connected. The formula for line-sphere intersection is derived from the respective object equations; the slabs raycasting method~\cite{slabs} is used for detecting line-box intersection within the AABB.
+
+The amount of vertices in a graph created this way can be bound by $\mathcal{O}(n^2)$ with respect to the number of obstacles -- at most there will be a vertex between each pair, and the number of virtual obstacles at the edges is constant. Unlike the grid approach and sampling based approaches, we are only paying a higher price for finding a path with an increasing number of obstacles, and are mostly unaffected when the workspace of the manipulator increases. This way of representing the workspace within the algorithm is particularly efficient for static manipulators in mostly unchanging environments but multiple consequent targets. Rather than building the whole graph every time we need to find a target, it is sufficient to update the source and target vertices, while the remainder of the graph stays the same.
+
+Of course, there is a reason why we've discussed the grid based approach for so long: apart from the graph we are operating on, the rest of the algorithm remains the same.
+The main takeaway from our grid based approach is that we want to assign a higher cost to vertices close to obstacles; this holds for our new graph as well. Each edge between vertices is assigned a cost based on the distance of the points to reflect the actual distance that needs to be traversed, while each vertex is assigned an additional cost for traversing over it based on how far it is from the surrounding obstacles.
+
+When creating the vertices, we know how far apart the obstacles it was created between are. This directly gives us a way of assigning costs, since a path that leads closely between obstacles is higher-risk, while a path in some open space is safer. Therefore, we make the weights inversely proportional to the distance between the two objects.
+
+Just like in the grid-based approach, we want to interpolate the found positions with a B-spline. Unlike the grid-based approach, the vertices are not spaced out evenly, and we want to use NURBS to extend each vertex with a weight. Recall that in a NURBS curve, each control point is associated with an additional weight, which determines how much it will affect the curve in its vicinity: a higher weight leads to paths closer to the point.
+
+\begin{figure}
+  \centering
+  \begin{subfigure}{.45\textwidth}
+    \includegraphics[width=0.99\textwidth]{nurbs_close.png}
+    \caption{The control point between obstacles has a high weight, so that the manipulator follows the path closely and fits between them.}
+  \end{subfigure}
+  \begin{subfigure}{0.45\textwidth}
+    \includegraphics[width=0.99\textwidth]{nurbs_far.png}
+    \caption{The control points created in the open space between the edges and obstacles have a low weight and only need to be followed loosely.}
+  \end{subfigure}
+  \caption{Illustration of how weights of vertices affect the resulting path.}\label{fig:nurb_paths}
+\end{figure}
+
+The weight associated with a given vertex directly translates to the weight of the resulting NURBS curve. Since each weight represents how close the surrounding obstacles are, it also represents how close to the point we need the curve to be in order to avoid them. When the obstacles are close, we need the weight of the NURBS control point to be high in order to fit in small passages. On the other hand, if the point is in an open space, we only need to approach it loosely, and trying to go to the middle of the open space could lead to unnecessary motion (see Figure~\ref{fig:nurb_paths}).
+
+Finally, we have a complete algorithm for trajectory generation of high DoF robotic arms:
+
+\begin{enumerate}
+\item The environment within which the manipulator exists is loaded, and a kinematic model of the manipulator is created.
+\item An AABB tree for collision checking is created. The obstacles and joints are approximated via spheres and inserted into the tree.
+\item A graph is generated by using the space between obstacles as vertices, and connecting vertices with an edge if the direct line between them is unobstructed by obstacles.
+\item The shortest path on the weighted graph between the initial position of the \textit{end effector} and the target is found.
+\item The found path is smoothed out by interpolating the vertices with a NURBS curve.
+\item The path is sampled at discrete points, and an extension of FABRIK is used to compute the joint parameters needed to reach each of the points.
+\item If FABRIK fails to find viable positions on the path, the path is evaluated as unsuccessful. The algorithm increases the cost of the vertices on the path, falls back to step 4 and tries to find a different path in the modified graph.
+\item If FABRIK finds viable positions on the path, use a shortcutting algorithm to post-process the path and minimize unnecessary movement.
+\end{enumerate}
+
+After finding all the intermediate positions, the motion can be realised by moving the manipulator's joints.
