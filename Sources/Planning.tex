@@ -238,6 +238,8 @@ Just like in the grid-based approach, we want to interpolate the found positions
 
 The weight associated with a given vertex directly translates to the weight of the resulting NURBS curve. Since each weight represents how close the surrounding obstacles are, it also represents how close to the point we need the curve to be in order to avoid them. When the obstacles are close, we need the weight of the NURBS control point to be high in order to fit in small passages. On the other hand, if the point is in an open space, we only need to approach it loosely, and trying to go to the middle of the open space could lead to unnecessary motion (see Figure~\ref{fig:nurb_paths}).
 
+\section{The final algorithm}
+
 Finally, we have a complete algorithm for trajectory generation of high DoF robotic arms:
 
 \begin{enumerate}
@@ -252,3 +254,17 @@ Finally, we have a complete algorithm for trajectory generation of high DoF robo
 \end{enumerate}
 
 After finding all the intermediate positions, the motion can be realised by moving the manipulator's joints.
+
+To analyze the complexity of our new algorithm, we need to look at the individual components and analyze the work done in them. The two parameters that influence the complexity are the number of joints, which we can denote with $j$, and the number of obstacles, which we can denote with $n$.
+
+The first operation that takes place is building the AABB tree. This process consists of inserting each joint and obstacle into the AABB, meaning $\mathcal{O}(j + n)$ insertions. As discussed earlier, no guarantees on the depth of the tree are given, which leads to a linear worst-case complexity of having to make a number of comparisons equal to the number of already inserted objects. Therefore, we can only bound the building of the tree by $\mathcal{O}({(j+n)}^2)$, although the average complexity will be much lower.
+
+To create the graph of vertices between obstacles, the path between each pair of obstacles is checked, bound by $\mathcal{O}(n^2 (j+n))$ due to the $\mathcal{O}(j+n)$ collision checking within the AABB. The upper limit on th enumber of vertices is $n^2$, therefore the creation of edges between each pair can be bound by $\mathcal{O}(n^4 (j+n))$.
+
+Finding the shortest path is done with Djikstra's algorithm, using a priority queue implemented with a standard binary heap. Since the complexity of Djikstra is $\mathcal{O}((|V|+|E|) \log{|V|})$, we can bound it with respect to the number of obstacles with $\mathcal{O}(n^4 \log{n})$.
+
+Since we are discretizing the path at constant intervals, the number of times we compute FABRIK on each path depends on the path's length. In the case of RoFI manipulators, the distance between all the joints is constant; hence, we can get a rough estimation of the maximal length of the path with respect to the number of joints. Since the maximal reach of the manipulator in one direction is bound by $\mathcal{O}(j)$ and it can move in 3 dimensions, the maximal length of the path, as well as the targets on it, is $\mathcal{O}(j^3)$.
+
+A single FABRIK iteration is linear to the number of joints. At each joint, we find the right position for the current joint ($\mathcal{O}(1)$), check if the current joint collides with any obstacles ($\mathcal{O}(j+n)$) and recompute the transformation matrices of all the following joints ($\mathcal{O}(j)$). FABRIK stops when the target is reached, when it gets stuck, or a constant iteration limit is hit without reaching the target. Therefore, the upper bound on the complexity of FABRIK for a single target is $\mathcal{O}(j^2(j+n))$.
+
+If the first path is evaluated as unsuccessful, we try different paths, but the total number of paths we explore can be bound by a small constant. Therefore, the total complexity of the algorithm is $\mathcal{O}(n^4(j+n)+j^5(j+n)) = \mathcal{O}(n^5+j^6)$. Although this complexity may seem quite high, note that we've used very rough estimates and each individual operation is very cheap. Multplying $4 \times 4$ matrices and doing simple number comparisons while collision checking are operations that are quite trivial and heavily optimized. And since the entire algorithm is clearly polynomial with respect to the number of joints, we've achieved the goal of making it scalable; unlike the state of the art approaches exponential to the number of joints.
