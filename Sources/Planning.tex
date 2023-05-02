@@ -100,8 +100,6 @@ Let us summarize the entire computation. Our input parameters are a model of the
 \item If the path can be followed successfully, the movement is realised. Otherwise, if FABRIK fails to find viable positions on this trajectory, the algorithm falls back to step 4, adjusts the grid, and tries to find a different path.
 \end{enumerate}
 
-We can now demostrate initial results within a RoFI simulator. As a baseline, we will consider a manipulator that consists of a chain of 4 modules, linked via the $-Z$ connectors. Since such a manipulator has 12 degrees of freedom, previous state of the art algorithms -- which only scale up to 6 -- would clearly not be useful.
-
 Let us start by visualizing the most basic case, to see if the produced motion is natural: the algorithm in a space with no obstacles.
 
 \begin{figure}
