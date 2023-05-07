@@ -1,16 +1,16 @@
 \chapter{Path planning with respect to the end effector}
 
-As of now, we have a fast inverse kinematics algorithm, which allows us to compute joint positions, given the \textit{end effector} position of the manipulator. If we can find a suitable path for the \textit{end effector} to follow, we can discretize it into small steps and use our extension of FABRIK to compute incremental changes along the path for the rest of the manipulator.
+As of now, we have a fast inverse kinematics algorithm, which allows us to compute joint positions, given the \textit{end effector} position of the manipulator. If we can find a suitable path for the end effector to follow, we can discretize it into small steps and use our extension of FABRIK to compute incremental changes along the path for the rest of the manipulator.
 
 Although we have a myriad of algorithms to deal with the 3-dimensional path planning problem, the task is not as simple as our initial example of a robot that can move in any direction; we need to find paths that can be followed with the remainder of the manipulator.
 
-This chapter goes through the process of designing such an algorithm for the task at hand.
+This chapter goes through the process of designing an algorithm for finding suitable end effector paths.
 
 \section{Grid based approach}
 
 Recall that one of the successfull ways of applying this technique has been mentioned in~\cite{rrt_fabrik}, where the authors expand a RRT and compute FABRIK at every node. However, our extended FABRIK is too slow to compute for every point in the workspace; hence, we want to limit the amount of times we run the algorithm to lower hundreds.
 
-Therefore, we want to find paths that lead to a solution with a high probability, and only compute FABRIK on points on this path. In case FABRIK fails on this path, for instance due to the manipulator being too short to get around an obstacle, we want to fall back and look for a different path.
+Instead of expanding throughout the space, we want to find paths that lead to a solution with a high probability, and only compute FABRIK on points on this path. In case FABRIK fails on this path, for instance due to the manipulator being too short to get around an obstacle, we want to fall back and look for a different path.
 
 Out of the three basic approaches, our go-to are the shortest path in a graph algorithms. As mentioned earlier, gradient based methods are not helpful due to the local minima problem and only generating a single possible path. Similarly, one of the weaknesses of the RRT algorithm is that it only finds a single path, and trying to generate edges between all possible nodes to find multiple paths would be computationally infeasible.
 
@@ -22,7 +22,7 @@ The advantage of this representation is that we can weigh the points on the grid
 
 Points on the grid that are occupied by an obstacle are assigned an infinite weight, clearly no path can lead through them. In the area surrounding each obstacle, the weight will be high. Generally, we want the algorithm to choose paths further from obstacles, if possible. This follows the reasoning that we want to accomodate for the rest of the manipulator. If the path for the \textit{end effector} leads closely around obstacles, the chance that the remaining joints of the manipulator will fit is also lowered. However, while expensive, we want the paths close to obstacles to be evaluated as viable, since there may not be other options.
 
-Each obstacle affects the surrounding area and raises the surrounding points on the grid based on how far they are. The total effect of obstacles is summed up; as a result, points between multiple obstacles are given a very high cost. A high cost between clusters of obstacles leads to the desired effect of preferring safer paths that avoid them altogether, though the path itself may be longer.
+Each obstacle affects the surrounding area and raises the surrounding points on the grid based on how far they are. The total weight of obstacles is summed up; as a result, points between multiple obstacles are given a very high cost. A high cost between clusters of obstacles leads to the desired effect of preferring safer paths that avoid them altogether, though the path itself may be longer.
 
 \begin{figure}
     \centering
@@ -84,7 +84,7 @@ Our case is a little different. In the case of RoFI manipulators, the rotation o
 
 There isn't a single best way of choosing the angle interpolation, since the inputs and targets can vary wildly. A method that performs reasonably well is to interpolate euler angles of the initial \textit{end effector} position and target with a quadratic function rather than a linear one. The reasoning behind this is that early targets for FABRIK have to be close to the initial position, but the target rotation is reached quickly and we don't make unnecessary movements.
 
-Now that we have all the pieces, we can run the algorithm and evaluate how good the paths found for the \textit{end effector} are.
+Now that we have all the pieces, we can run the algorithm and see how it performs.
 
 \section{Optimising the manipulator trajectory}
 
@@ -246,7 +246,7 @@ Finally, we have a complete algorithm for trajectory generation of high DoF robo
 \item A graph is generated by using the space between obstacles as vertices, and connecting vertices with an edge if the direct line between them is unobstructed by obstacles.
 \item The shortest path on the weighted graph between the initial position of the \textit{end effector} and the target is found.
 \item The found path is smoothed out by interpolating the vertices with a NURBS curve.
-\item The path is sampled at discrete points, and an extension of FABRIK is used to compute the joint parameters needed to reach each of the points.
+\item The path is sampled at discrete points, and an extension of FABRIK is used to compute the joint parameters needed to reach each of the points. The size of the step depends on whether there are any obstacles near the current position on the curve; smaller steps are made when going around obstacles.
 \item If FABRIK fails to find viable positions on the path, the path is evaluated as unsuccessful. The algorithm increases the cost of the vertices on the path, falls back to step 4 and tries to find a different path in the modified graph.
 \item If FABRIK finds viable positions on the path, use a shortcutting algorithm to post-process the path and minimize unnecessary movement.
 \end{enumerate}

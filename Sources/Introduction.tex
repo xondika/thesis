@@ -9,7 +9,7 @@ specific instructions of \textit{how} to do it.
 
 This seemingly basic task contains many interesting subproblems, including but not limited to
 the high level design of the robot, hardware design and programming, image or speech recognition, and human computer interaction.
-For us, the critical part will be performing the task itself; in this case, computing and realising the movement necessary to grab a cup and deliver it to the target location.
+For us, the critical part will be performing the task itself; in this case, computing the movement necessary to grab a cup and deliver it to the target location.
 
 A natural way for us to approach the problem is to create a humanoid robot, or simply a robotic arm on a fixed base. Even if we limit ourselves to the latter, the idea is quite fascinating; outside of making coffee for computer scientists, it can assist engineers or surgeons in their work.
 
@@ -28,6 +28,8 @@ some of which have been successfully used in practice to perform a specific task
 What mostly sets our goals apart from previous research is the assumption that we have a high number of joints. This fact, at its core, makes traditional methods for related problems computationally infeasible.
 Being unable to use a single existing method will lead us to decomposing the problem into smaller parts and combining various algorithms from different areas. By the end, we hope to build a satisfiable solution, starting with each component from the ground up.
 
+Note that we are solving the trajectory planning, which is a subset of the motion planning problem. While there is only a subtle difference that a lot of researchers skim over, motion planning encompasses the hardware design, dealing with motor failure, and dealing with outside forces such as gravity or wind. This thesis abstracts away from the physical aspects, and only focuses on the algorithmic parts.
+
 Outside of robotics, having a general algorithm with this specification is interesting for computer graphics, in particular for generating character movement in videogames.
 With an algorithm that can compute the motion of a constrained limb with a high number of joints at our disposal, we can design complex kinematic models and animate movement of the respective characters in complex environments.
 
@@ -35,8 +37,12 @@ With an algorithm that can compute the motion of a constrained limb with a high 
 \section{Outline of the work}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-This thesis will try to lead the reader through the process of designing an algorithm for the motion planning of robotic arms. We will start with a more formal definition of the problem, preliminary knowledge, and introduction of the platform our solution will be presented on.
+This thesis tries to guide the reader through the process of designing an algorithm for the trajectory planning of robotic arms. In the second chapter, preliminary knowledge is established. We give a more formal definition of the problem and explain some of the basic concepts that we build our algorithm on. Afterwards, the the RoFI platform is presented, which serves as motivation for the algorithm and presents a platform the algorithm can be evaluated on.
 
-As we try to incrementally design an algorithm, the discussion of state of the art methods, some mathematical theory, and main ideas behind the implementation will be tied together to create the core of this thesis. Each idea will be accompanied by the intuition behind it, as well as a visual representation. Apart from the ideas that will build our final solution, we will explore methods that were not successful, and discuss the limits of different approaches.
+The 3\rd{} chapter explains the general concepts behind motion planning as a whole, and then discusses the existing solutions for the motion planning of robotic arms.
 
-Finally, the solution will be tested and evaluated. We will showcase the behavior of the algorithm in various environments, and present a possible application for it. We will run benchmarks to evaluate the efficiency and success rate of the algorithm. At the end, takeaways from the design process and further improvements will be discussed.
+The core of the thesis are the 4\th{} and 5\th{} chapters. The problem is decomposed into various parts, each of which are discussed individually. Each component is accompanied by the intuition behind it, as well as a visual representation. Then, the algorithm is presented as a whole.
+
+The 6\th{} chapter deals with the experimental evaluation in a RoFI simulator. The algorithm is tested out in various handcrafted examples, and a visual representation for the resulting motion is given. Then, the algorithm is benchmarked in random environments.
+
+The final chapter draws conclusions from the design process and experimental evaluation of the method. Takeaways and further improvements are discussed.

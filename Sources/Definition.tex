@@ -45,13 +45,13 @@ The state of the robot is called its configuration. A configuration is uniquely 
 
 The number of parameters that define a robotic system is referred to as degrees of freedom (DoF). Revolute and prismatic joints each have one degree of freedom. The parameter of a revolute joint is the current angle of rotation; the parameter of a prismatic joint is the current length it's extended at. Ball and cylindrical joints each have two degrees of freedom, respectively. The DoF of a robotic manipulator is the sum of DoFs of its flexible joints.
 
-The end of a robotic arm is called the end effector. Typically, the end effector is different from the rest of the manipulator; it consists of a tool specialized to the robot's task. The end effector is designed to interact with the robot's environment, and there are many variatons. If the manipulator is designed to move objects, the end effector can be a fingerlike gripper, claw, or even use electromagnetic forces~\cite{grippers}. In handling textile materials, the end effector can be equipped with scissors, pins or needles.
+The end of a robotic arm is called the \textit{end effector}. Typically, the end effector is different from the rest of the manipulator; it consists of a tool specialized to the robot's task. The end effector is designed to interact with the robot's environment, and there are many variatons. If the manipulator is designed to move objects, the end effector can be a fingerlike gripper, claw, or even use electromagnetic forces~\cite{grippers}. In handling textile materials, the end effector can be equipped with scissors, pins or needles.
 
-When we refer to the position of the end effector, we mean its location and rotation in cartesian space. The parameter of a joint, such as its current rotation or extension, is sometimes called its position as well; not to be confused with its position in space. Though  generally, knowing the joint parameters will let us compute their position in space, and vice versa.
+When we refer to the position of the end effector, we mean its location and rotation in cartesian space. The parameter of a joint, such as its current rotation or extension, is sometimes called its position as well; not to be confused with its position in space. Though  generally, knowing the joint parameters lets us compute their position in space, and vice versa.
 
 \section{Kinematics of robotic manipulators}
 
-The science that studies the relationship between joint parameters and the positions in cartesian space -- particularly the end effector -- is called kinematics.
+The science that studies the relationship between joint parameters and the positions in cartesian space -- particularly the \textit{end effector} -- is called kinematics.
 We differentiate between forward and inverse kinematics.
 
 Forward kinematics is the problem of finding the end effector position knowing the joint parameters. For manipulators with traditional joints, solving this problem is simple enough, and there is always a unique solution. The specifics differ based on the build of the robot, but there is a standard convention for it.
@@ -89,7 +89,7 @@ The transformations around the X axis are expressed analogously:
 
 \begin{equation}
   Trans_X(r) = \begin{bmatrix}
-                 1 & 0 & 0 & 0 \\ 0 & 1 & 0 & 0 \\ 0 & 0 & 1 & r \\ 0 & 0 & 0 & 1 \\
+                 1 & 0 & 0 & r \\ 0 & 1 & 0 & 0 \\ 0 & 0 & 1 & 0 \\ 0 & 0 & 0 & 1 \\
                \end{bmatrix}
 \end{equation}
 
@@ -114,7 +114,7 @@ Altogether, for a single joint i, we obtain the transformation matrix:
         \end{bmatrix}
 \end{equation}
 
-To obtain the position of the end effector (or any other link) of a manipulator, we simply need to multiply all the joint transformations leading up to it:
+To obtain the position of the \textit{end effector} (or any other link) of a manipulator, we simply need to multiply all the joint transformations leading up to it:
 
 \begin{equation}
   [T] = T_0T_1\cdots T_{n-1}T_n
@@ -203,17 +203,17 @@ The algorithm consists of simple geometric computations, which are very fast. Ju
     \includegraphics[width=0.8\textwidth]{fabrik.png}
     \caption[]{Fabrik algorithm~\cite{Ondika2021thesis}:
       \begin{enumerate*}
-        \item[(a)] the initial position of the arm and the target
-        \item[(b)] the end-effector $p_4$ is moved to the desired position
-        \item[(c)] a vector between $p_3$ and the new $p_4$ is found, $p_3$ is repositioned along this line
-        \item[(d)] arm after the forward reaching stage
-        \item[(e)] the first point is moved to its initial position; the algorithm repeats itself in the other direction
-        \item[(f)] final state; the base is in place and the target has been reached
+        \item[a)] the initial position of the arm and the target
+        \item[b)] the end-effector $p_4$ is moved to the desired position
+        \item[c)] a line between $p_3$ and the new $p_4$ is found, $p_3$ is repositioned along this line
+        \item[d)] arm after the forward reaching stage
+        \item[e)] the first point is moved to its initial position; the algorithm repeats itself in the other direction
+        \item[f)] final state; the base is in place and the target has been reached
        \end{enumerate*}
     }\label{fig:fab}
   \end{figure}
 
-Rather than working with matrices or joint angles, the basic version of the algorithm calculates with points. As the name suggests, each iteration of the algorithm consists of two stages. In the first, forward reaching stage, the end-effector is moved to the desired target. Then, for each joint, the algorithm computes a line between the current and the next joint, which has already been moved. The current joint is moved along this line to the original distance between the two joints. Afterwards, the process is repeated for every joint, up until the base.
+Rather than working with matrices or joint angles, the basic version of the algorithm calculates with points. As the name suggests, each iteration of the algorithm consists of two stages. In the first, forward reaching stage, the \textit{end effector} is moved to the desired target. Then, for each joint, the algorithm computes a line between the current and the next joint, which has already been moved. The current joint is moved along this line to the original distance between the two joints. Afterwards, the process is repeated for every joint, up until the base.
 
 At this point, the algorithm has reached the target, but the immovable base may have been assigned a new position. Hence the algorithm is repeated, but this time it sets the base to the initial position and follows through with the algorithm all the way to the top. This forward and backward reaching is repeated until the base remains in its initial position and the end-effector reaches the target. Figure~\ref{fig:fab} illustrates the procedure.
 
@@ -236,7 +236,7 @@ The FABRIK algorithm is very powerful and will serve us further, but note that i
 \begin{subfigure}{.3\textwidth}
   \centering
   \includegraphics{IK_collision.png}
-  \caption{Trying to rotate the joints would lead to a collision with the obstacle}
+  \caption{Trying to rotate the joints would cause a collision with the obstacle}
 \end{subfigure}
 \caption{A simple case where inverse kinematics is not enough to solve the motion planning problem.}\label{fig:ikcoll}
 \end{figure}
@@ -249,14 +249,13 @@ As technology progresses, research in robotics has moved on from single purpose 
 
 \begin{figure}
     \centering
-    \includegraphics[width=1\textwidth]{rofi_platform.jpg}
+    \includegraphics[width=0.8\textwidth]{rofi_platform.jpg}
   \caption{Logo of the RoFI platform~\cite{rofiPlatform}}
 \end{figure}
 
 There have been many research projects concerned with modular robots, each with their own approach to the task at hand. Some projects, such as Roombots~\cite{sprowitz_roombots_2010}, try to build solid structures that can disassemble once their task has been fulfilled. Roombots use sphere shaped modules along with passive blocks to assemble various pieces of furniture, which can be useful for saving space in small apartments or aiding people with disabilities with their daily tasks. Other systems, such as M-TRAN~\cite{mtran} or SMORES~\cite{smores}, try to build mobile robots from more universal modules. Such modules have a joint or two and can perform simple motion; by connecting to each other, they can build bigger robots and fulfill more complex tasks. The designs vary, and there hasn't been any clear winner in the field. An overview on the state of modular robotics can be found here~\cite{modular_survey}, but the field keeps evolving.
 
 The RoFI platform~\cite{Mrázek2019thesis} is an open source modular robotics project developed at Masaryk University. The project is driven by students and consists of algorithmic research~\cite{Vozárová2019thesis, Zacek2021thesis, Nausova2022thesis, Ondika2021thesis, SMTReconfig}, development of hardware~\cite{Mrázek2019thesis, RoFICoM}, networking~\cite{Chlup2020thesis, Chlup2023thesis} and creating tooling for the development of the robots~\cite{Naušová2019thesis, Svoboda2020thesis}.
-
 A robot within this platform, which we refer to as RoFIbot, is comprised of various modules. These can connect and disconnect based on the robot's needs, and allow it to change its overall shape.
 
 \begin{wrapfigure}{r}{0.3\textwidth}
@@ -281,6 +280,6 @@ Each body has a stepper motor that can turn from $-90$ to $90$ degrees. In our m
   \caption{RoFI connectors~\cite{rofiUm}}\label{fig:um_con}
 \end{wrapfigure}
 
-Each shoe has 3 connectors; we identify them via the shoe they're on and the direction they're facing with respect to the body. The connectors are genderless, which allows them to connect with any other connector within the plaform, and they can be retracted when not in use. Each connector is equipped with simple Lidar~\cite{Lidar} sensors. These perodically send out a laser that gets reflected off of nearby objects; this allows them to detect obstacles and estimate their distance based on how quickly the reflection returned. As a result, the modules don't have a full view of their environment, but each can locally detect nearby obstacles, as well as recognize whether there is another module they can connect to next to them.
+Each shoe has 3 connectors; we identify them via the shoe they're on and the direction they're facing with respect to the body. The connectors are genderless, which allows them to connect with any other connector within the plaform, and they can be retracted when not in use. Each connector is equipped with simple Lidar~\cite{Lidar} sensors. The sensors perodically send out a laser that gets reflected off of nearby objects, which allows them to detect obstacles and estimate their distance based on how quickly the reflection returned. As a result, the modules don't have a full view of their environment, but each can locally detect nearby obstacles, as well as recognize whether there is another module they can connect to next to them.
 
 Since each module has 3 degrees of freedom and the modules can be connected in various ways, the DoF of a RoFIbot rises very quickly with each module. If we wish to compute motion for the robot as a whole, traditional algorithms\footnote{Which are generally exponential with respect to the DoF, see the next chapter\ref{SotA}.} quickly become computationally infeasible. As one of the goals for this thesis is control of robotic arms comprised of such modules, a simulation within the RoFI platform will be used to demostrate our results.

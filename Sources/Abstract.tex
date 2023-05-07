@@ -4,6 +4,8 @@
 %
 \noindent
 %
-Scientific documents often use \LaTeX{} for typesetting. While numerous
-packages and templates exist, it makes sense to create a new one. Just
-because.
+RoFI is a platform of metamorphic robots -- robots consisting of individual modules which each work autonomously and have their own simple joints, but can connect to each other and complete more complex tasks. A natural shape for these robots to take is a robotic arm, which can manipulate with the surrounding objects. What separates RoFI arms from pre-built industrial arms is the total number of joints (degrees of freedom), which rises with each module.
+
+An essential task for robotic arms (manipulators) is the act of moving one object from one place to the other. To successfully accomplish this task, we need to plan a trajectory the manipulator can take to reach the object, while avoiding collisions with potential obstacles. Various algorithms for this problem exist, but the complexity of standard methods scales exponentially with each degree of freedom, making them unusable for RoFI arms.
+
+This thesis aims to design and implement an algorithm for trajectory planning of robotic manipulators with a very high degree of freedom. The thesis goes through the process of designing such an algorithm, explains the individual components, and presents the algorithm as a whole. Finally, the results are evaluated in a simulator within the RoFI environment.

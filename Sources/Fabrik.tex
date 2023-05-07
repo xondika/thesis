@@ -25,7 +25,7 @@ This way, the joints of the copy serve as points for the forward reaching stage,
   \caption{Extended FABRIK algorithm: a copy of the manipulator is created and rooted at the target. Then, at each joint, the distance to the original joint is minimized. Finally, the same algorithm is repeated for the original manipulator, with the copy's joints as targets, and a solution is reached.}\label{fig:ext_fab}
 \end{figure}
 
-As the two iterations alter, the two kinematic models converge to each other. Since the first model is rooted in the arm's origin and the second is rooted at the end in the target, we can successfully finish the algorithm if they get close enough to each other. The algorithm is illustrated in Figure~\ref{fig:ext_fab}. Since the transformation matrices for the joints need to be recomputed repeatedly, the whole process is slower than the original algorithm, but gains several advantages.
+As the two iterations alter, the two kinematic models converge to each other. Since the original model is rooted in the arm's origin and the copy's \textit{end effector} is rooted in the target position, we can successfully finish the algorithm if they get close enough to each other. The algorithm is illustrated in Figure~\ref{fig:ext_fab}. Since the transformation matrices for the joints need to be recomputed repeatedly, the whole process is slower than the original algorithm, but gains several advantages.
 
 \begin{itemize}
   \item The algorithm for forward and backward reaching is exactly the same, hence, it can be reused and the code is less sensitive to changes in the kinematic model.
@@ -56,10 +56,7 @@ the joint is instead set to the nearest feasible angle.
 
 \begin{figure}[h]
     \centering
-    \begin{minipage}{\textwidth}
-        \includegraphics[width=.48\textwidth]{break_plane.png}
-        \includegraphics[width=.48\textwidth]{break_fixed.png}
-    \end{minipage}
+    \includegraphics[width=0.95\textwidth]{limit.png}
     \caption{The computed position violates the joint limit; the actual joint is clamped~\cite{Ondika2021thesis}.}\label{fig:break}
 \end{figure}
 
@@ -186,7 +183,7 @@ If the computed movement would cause a collision, a local limit is set on the cu
     \caption{Illustration of FABRIK with simple collision avoidance.}\label{fig:coll}
 \end{figure}
   
-Note that compared to the aforementioned collision avoidance method, this one only works locally for each joint. As a result, it can get stuck in a local minimum, and not get over an obstacle. This is a disadvantage if we wanted to use it to immediately find a final solution; the algorithm could fail even though a solution exists. On the other hand, this behavior is desirable if we are using it to repeatedly compute incremental changes; the manipulator doesn't jump over obstacles when the actual movement is not directly possible. Additionally, the manipulator does not need complete knowledge of the environment, and we don't need to rely on randomness, which saves computational time and guarantees faster convergence.
+Note that compared to the aforementioned collision avoidance method, this one only works locally for each joint. As a result, it can get stuck in a local minimum, and not get over an obstacle. This is a disadvantage if we wanted to use it to immediately find a final solution; the algorithm could fail even though a solution exists. On the other hand, this behavior is desirable if we are using it to repeatedly compute incremental changes; the manipulator doesn't jump over obstacles when the actual movement is not directly possible. Additionally, the current joint does not need complete knowledge of the environment which saves computational time, and we don't need to rely on randomness which guarantees faster convergence.
 
 As of now, we need to compare the new joint position with each other joint and each surrounding object in the workspace. Since other joints and obstacles are approximated with spheres, the collision check is very cheap: if the centers of two spheres are closer than the sum of their radii, the two spheres collide. However, checking every object is clearly asymptotically inefficient. Analog to doing lookup of strings or numbers in binary search trees, we would like to store our shapes in a structure that allows lookup with a logarithmic amount of comparisons.
 
@@ -194,7 +191,7 @@ A common structure for holding 3-dimensional information in robotics is the Octr
 
 Hence, we opt for the data structure more commonly used in video games -- Axis Aligned Bounding Box Trees, AABB for short~\cite{aabb}. An AABB is a binary tree where shapes are stored in the leaves, and each inner node serves as the bounding box of its children. The bounding boxes are, as the name suggests, axis aligned -- we define them with standard $x, y, z$ dimensions and do not consider varying rotations. Unlike octrees, nodes in the AABB are of varying size, see Figure~\ref{fig:aabb}.
 
-\begin{figure}[h]
+\begin{figure}
   \centering
   \includegraphics[width=0.8\textwidth]{aabb.png}
   \caption{Obstacles in space with the corresponding bounding boxes, and the inner structure of the AABB tree holding them.}\label{fig:aabb}
