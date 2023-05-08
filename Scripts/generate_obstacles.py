@@ -50,7 +50,7 @@ def generate_clusters( x1, x2, y1, y2, z1, z2, amount = 20 ):
 
         collides = False
         for cube in cubes:
-            if dist( cube, [x, y, z] ) < 2.0:
+            if dist( cube, [x, y, z] ) < 1.5:
                 collides = True
 
         if not collides:

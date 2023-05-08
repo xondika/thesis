@@ -128,8 +128,67 @@ The average number of explored paths is higher in this case, and the found paths
 
 As we can see, the algorithm performs nicely in various environments and finds successful ways to reach the given target. The computation usually runs for less than a second, instantaneous in eyes of a human observer. Reaching some targets takes a couple of seconds, leading to a noticeable delay, but note that the implementation is only a proof of concept, and the given times are referential; there are certainly more optimisations that can be added to the algorithm.
 
+% \newpage
+
 \section{Performance}
 
-Of course, looking at the results on (mostly) handcrafted examples doesn't give us a full picture of the algorithm's overall performance. To evaluate it on a larger scale, we can use an environment with randomly generated obstacles and randomly chosen (reachable) targets. We are interested in how often the algorithm successfully finds a path to the target, how long the individual parts of the computation take, and how well it scales with respect to an increasing number of obstacles and joints.
+To delve deeper into analyzing our algorithm, we can look at some of the previous examples and evaluate which parts are the most expensive. We measure the following parameters:
 
-// TODO: dodělat benchmarking a dát sem tabulky/grafy
+\begin{itemize}
+\item Initialization, which includes building an AABB with all the obstacles and creating the graph
+\item Djikstra, which looks for shortest paths in the created graph
+\item FABRIK, which serves to find solutions on the found paths
+\item Interpolation between the positions computed by FABRIK, to see if a step is valid and whether it can be skipped
+\end{itemize}
+
+\newpage
+\begin{wrapfigure}{r}{0.50\textwidth}
+  \centering
+  \includegraphics[width=0.5\textwidth]{Runtimes.png}
+  \caption{Percentage of computation times for each component}
+\end{wrapfigure}
+
+The diagram shows 3 examples: The first one is an environment with 12 obstacles, but the target is trivially reachable. The second example is a nontrivial target in the same environment, and the third is a target far from the manipulator in a space with 20 randomly generated obstacles. The total runtimes are $0.01s, 0.7s, 2.3s$ respectively. In the first bar, the initialization is seemingly expensive compared to the other parts of the computation. However, looking at the 2\nd{} and 3\rd{} examples, it's obvious that the repeated FABRIK computation is the heavy part: although a single computation is very fast, particularly when making incremental changes, the amount of times we have to compute it many times. In addition, reaching a target is much faster than determining that a target is not reachable, which adds a lot of extra cost to unsuccessful paths. As direction for where the algorithm can be optimised, we can look at ways of shutting down computations for unsuccessful paths early and reducing the number of unsuccessful FABRIK computations.
+
+On the other hand, since our representation of space is compact, finding shortest paths with Djikstra takes barely any time, hence, trying to optimize this part with something like A* would bring no benefit.
+
+\begin{wrapfigure}{l}{0.4\textwidth}
+  \centering
+  \includegraphics[width=0.4\textwidth]{fabrik_anal.png}
+  \caption{\\Computation times within FABRIK}
+\end{wrapfigure}
+
+Since we've extended FABRIK to compute with matrices instead of points and check for collisions, it's worth analyzing which parts of FABRIK make it slow down. The piechart shows the rate of the respective computation times when running in an environment with 20 obstacles. Collision checking includes all the work associated with the AABB tree management, while the remaining time deals with finding the right joint angles and computing the respective transformation matrices. As we can see, the extension to various joints with limits does not slow the algorithm down in a significant way, but avoiding collisions with nearby objects does.
+
+Of course, looking at the results on handcrafted examples doesn't give us a full picture of the algorithm's overall performance. To evaluate it on a larger scale, we can use environments with randomly generated obstacles and randomly chosen (reachable) targets. We are interested in how often the algorithm successfully finds a path to the target, how long the computation takes, and how well it scales with respect to an increasing number of obstacles and joints.
+
+\begin{wrapfigure}{r}{0.4\textwidth}
+  \centering
+  \includegraphics[width=0.4\textwidth]{scaling.png}
+  \caption{\\Increase in computation time with longer manipulators}
+\end{wrapfigure}
+
+First up, we want to confirm that the algorithm scales well with respect to the joints only. For this purpose, we can test it out in an environment with very few obstacles, and generate random targets unobstructed by any of the obstacles. The plot shows the average computation time among reaching 10 consequent targets. Since the expensive part of the algorithm lies in FABRIK, which scales linearly with each joint, we get a nice linear looking scaling as well. This scaling is a critical aspect of the algorithm: since each module brings 3 extra degrees of freedom, not only does the algorithm work for 12 DoF, double the state of the art amount, it scales reasonably well into 30. Although we've estimated the asymptotical complexity of the extended FABRIK higher than linear, the AABB operations don't get significantly more expensive with the addition of a few joints.
+The paths, which can be quite a bit longer due to the manipulator's extended reach, can make a big difference in how many times FABRIK is computed. The difference doesn't show itself in this particular case because we know we can choose the shortest one, as well as make large intermediate steps when there are no obstacles on the chosen path.
+
+
+
+Next, we can take our original manipulator of 4 modules and test it out with an increasing number of randomly placed obstacles. We generate 20 random subsequent targets for the manipulator, and see how many were reached and how long it took to find a viable path. Since determining whether a point is reachable in itself is a hard problem, we settle with generating targets in the manipulator's range that don't collide with any obstacles. The goal may not be reachable due to the rotation of the end effector or a particular way obstacles were generated, which can lead to a false negative. Even so, it gives us a lower bound on the success rate of our algorithm.
+
+\begin{figure}
+  \centering
+  \begin{subfigure}{.45\textwidth}
+    \includegraphics[width=0.99\textwidth]{obstacle_times.png}
+    \caption{Number of obstacles and the average time to reach a target}
+  \end{subfigure}
+  \begin{subfigure}{0.45\textwidth}
+    \includegraphics[width=0.99\textwidth]{obsacle_success.png}
+    \caption{Number of obstacles and the success rate}
+  \end{subfigure}
+
+  \caption{Manipulator of 4 modules with random targets between randomly generated obstacles.}\label{fig:inc_obst}
+\end{figure}
+
+As we can see in Figure~\ref{fig:inc_obst}, the manipulator can move around very well all the way up to 25 obstacles, finding solutions with a high success rate in up to a second of time. Unfortunately, 25 obstacles seems to be the limit for RoFI manipulators of 4 modules, as a higher count no longer gave the manipulator around space to move around and trying to reach most targets failed.
+
+Finally, we can combine both aspects, and see how the algorithm performs with a higher number of joints as well as obstacles.
