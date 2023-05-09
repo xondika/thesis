@@ -28,7 +28,7 @@ some of which have been successfully used in practice to perform a specific task
 What mostly sets our goals apart from previous research is the assumption that we have a high number of joints. This fact, at its core, makes traditional methods for related problems computationally infeasible.
 Being unable to use a single existing method will lead us to decomposing the problem into smaller parts and combining various algorithms from different areas. By the end, we hope to build a satisfiable solution, starting with each component from the ground up.
 
-Note that we are solving the trajectory planning, which is a subset of the motion planning problem. While there is only a subtle difference that a lot of researchers skim over, motion planning encompasses the hardware design, dealing with motor failure, and dealing with outside forces such as gravity or wind. This thesis abstracts away from the physical aspects, and only focuses on the algorithmic parts.
+Note that we are only planning the motion, and not actually realizing it on physical robots. While there is only a subtle difference that a lot of researchers skim over, executing the motion encompasses the hardware design, dealing with motor failure, and dealing with outside forces such as gravity or wind. This thesis abstracts away from the physical aspects, and only focuses on the algorithmic parts.
 
 Outside of robotics, having a general algorithm with this specification is interesting for computer graphics, in particular for generating character movement in videogames.
 With an algorithm that can compute the motion of a constrained limb with a high number of joints at our disposal, we can design complex kinematic models and animate movement of the respective characters in complex environments.
