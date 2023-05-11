@@ -2,7 +2,7 @@
 
 To start, we need to establish terminology and preliminary knowledge. Throughout this thesis, we will be discussing robotic arms; in robotic terms, they are more commonly referred to as \textit{manipulators}.
 
-\begin{wrapfigure}{r}{0.25\textwidth}
+\begin{wrapfigure}{r}{0.35\textwidth}
     \centering
     \includegraphics[width=0.35\textwidth]{Industrial-robotic-arm.jpeg}
   \caption{\\Industrial robotic arm with a gripper~\cite{manipulator}}
@@ -186,12 +186,12 @@ Some authors~\cite{Wolovich1984ACT} suggest using the transpose of the Jacobian 
 
 The other branch of inverse kinematics algorithms are heuristic techniques. These consist of simpler computations and make decisions locally at each joint. They are faster, scale linearly with respect to the DoF of the manipulator and can easily be extended with joint limits. However, due to making local decisions, these methods can struggle with computing collision free positions or providing any other guarantees about the resulting position of the arm.
 
-\begin{wrapfigure}{r}{0.35\textwidth}
+\begin{figure}
     \centering
-    \includegraphics[width=0.35\textwidth]{ccd1.png}
-    \caption{\\CCD algorithm~\cite{Ondika2021thesis}: The angles are repeatedly computed for each joint until a solution is found}
+    \includegraphics[width=0.6\textwidth]{ccd1.png}
+    \caption{CCD algorithm~\cite{Ondika2021thesis}: The angles are repeatedly computed for each joint until a solution is found}
     \label{fig:ccd}
-\end{wrapfigure}
+\end{figure}
 
 The simplest of these methods is Cyclic Coordinate Descent (CCD)~\cite{ccd}. This algorithm iteratively goes through the joints of the manipulator, starting at the end effector, and turns each of them so that the distance to the target is locally minimized. Once it reaches the base, it starts iterating from the end again, until the end effector is close enough to the target (see Figure~\ref{fig:ccd}). This algorithm is fast, scales well, and in an unconstrained system, it always finds a solution, if one exists. However, the reached positions are very unnatural, which can lead to collisions with the environment, or even the manipulator itself. If we add obstacles or joint limits, the algorithm is also susceptible to local minima.
 
@@ -223,20 +223,20 @@ The FABRIK algorithm is very powerful and will serve us further, but note that i
 
 \begin{figure}
 \centering
-\begin{subfigure}{.3\textwidth}
+\begin{subfigure}{.32\textwidth}
   \centering
   \includegraphics{IK_target.png}
   \caption{Initial position of the manipulator, a rigid obstacle and a target}
 \end{subfigure}%
-\begin{subfigure}{.3\textwidth}
+\begin{subfigure}{.32\textwidth}
   \centering
   \includegraphics{IK_solution.png}
   \caption{A valid solution where the target is reached by the end effector}
 \end{subfigure}%
-\begin{subfigure}{.3\textwidth}
+\begin{subfigure}{.32\textwidth}
   \centering
   \includegraphics{IK_collision.png}
-  \caption{Trying to rotate the joints would cause a collision with the obstacle}
+  \caption{Trying to rotate the joints would cause a collision}
 \end{subfigure}
 \caption{A simple case where inverse kinematics is not enough to solve the motion planning problem.}\label{fig:ikcoll}
 \end{figure}
@@ -249,7 +249,7 @@ As technology progresses, research in robotics has moved on from single purpose 
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.8\textwidth]{rofi_platform.jpg}
+    \includegraphics[width=0.65\textwidth]{rofi_platform.jpg}
   \caption{Logo of the RoFI platform~\cite{rofiPlatform}}
 \end{figure}
 
@@ -274,12 +274,12 @@ The basic building block of each robot within the platform is the universal modu
 
 Each body has a stepper motor that can turn from $-90$ to $90$ degrees. In our models, we refer to the joints as $\alpha$ and $\beta$. Per DH convention, the rotation is calculated as rotation around the $X$ axis with respect to the module's frame. What separates the design of RoFI modules from previous projects such as M-TRAN is the $\gamma$ joint, which allows unlimited rotation around the middle part of the robot, i.e.\ the $Z$ axis. The existence of this joint means that in combination with one of the other motors, the module can perform rotation in any direction, allowing it to perform more complex motions compared to its predecessors.
 
-\begin{wrapfigure}{r}{0.3\textwidth}
+\begin{wrapfigure}{r}{0.38\textwidth}
     \centering
-    \includegraphics[width=0.3\textwidth]{um_connectors.png}
+    \includegraphics[width=0.37\textwidth]{um_connectors.png}
   \caption{RoFI connectors~\cite{rofiUm}}\label{fig:um_con}
 \end{wrapfigure}
 
-Each shoe has 3 connectors; we identify them via the shoe they're on and the direction they're facing with respect to the body. The connectors are genderless, which allows them to connect with any other connector within the plaform, and they can be retracted when not in use. Each connector is equipped with simple Lidar~\cite{Lidar} sensors. The sensors perodically send out a laser that gets reflected off of nearby objects, which allows them to detect obstacles and estimate their distance based on how quickly the reflection returned. As a result, the modules don't have a full view of their environment, but each can locally detect nearby obstacles, as well as recognize whether there is another module they can connect to next to them.
+Each shoe has 3 connectors; we identify them via the shoe they're on and the direction they're facing with respect to the body. The connectors are genderless, which allows them to connect with any other connector within the plaform, and they can be retracted when not in use. Each connector is equipped with simple Lidar~\cite{Lidar} sensors. The sensors perodically send out a laser that gets reflected off of nearby objects, which allows them to detect obstacles and estimate their distance based on how quickly the reflection returned. As a result, the modules don't have a full view of their environment, but each can detect nearby obstacles, as well as recognize whether there is another nearby module they can connect to.
 
 Since each module has 3 degrees of freedom and the modules can be connected in various ways, the DoF of a RoFIbot rises very quickly with each module. If we wish to compute motion for the robot as a whole, traditional algorithms\footnote{Which are generally exponential with respect to the DoF, see the next chapter\ref{SotA}.} quickly become computationally infeasible. As one of the goals for this thesis is control of robotic arms comprised of such modules, a simulation within the RoFI platform will be used to demostrate our results.

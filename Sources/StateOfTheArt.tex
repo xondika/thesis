@@ -5,11 +5,11 @@ As researchers try to develop new algorithms and push the boundaries of what is 
 
 \section{General concepts -- path planning for a 2D robot}
 
-\begin{wrapfigure}{r}{0.33\textwidth}
+\begin{figure}[ht]
     \centering
-    \includegraphics[width=0.32\textwidth]{robot_obstacles.png}
+    \includegraphics[width=0.4\textwidth]{robot_obstacles.png}
   \caption{A moving robot (blue) in 2 dimensions, trying to reach a target (red) while avoiding obstacles (black).}\label{fig:bot}
-\end{wrapfigure}
+\end{figure}
 
 For simplicity, let us consider the case of a robot that can move in any direction, trying to find a path to a goal in a 2-dimensional space with some obstacles. The proper term for this is path planning; since we are only concerned with finding a path and not realising the actual movement, it is a subproblem of motion planning. Though in some literature, the terms are incorrectly used interchangeably.
 
@@ -17,11 +17,11 @@ We will assume that the robot has full knowledge of the environment, and the env
 
 The first idea that comes to mind after completing a basic algorithms course is to use algorithms for finding the shortest paths, such as the asymptotically optimal Djisktra's algorithm. The problem is that the space we are moving in is continuous, while the shortest path graph algorithms require discrete graphs connected with edges.
 
-\begin{wrapfigure}{r}{0.33\textwidth}
+\begin{figure}[ht]
     \centering
-    \includegraphics[width=0.32\textwidth]{robot_grid_path.png}
-  \caption{\\Path to target found by Djikstra's algorithm on a grid.}\label{fig:grid}
-\end{wrapfigure}
+    \includegraphics[width=0.4\textwidth]{robot_grid_path.png}
+  \caption{Path to target found by Djikstra's algorithm on a grid.}\label{fig:grid}
+\end{figure}
 
 An intuitive approach to discretizing our space is creating a grid that represents the space, treating the points on the grid as vertices, and assigning the edges that lead to an occupied square an infinite cost. On this grid, finding the shortest path is a simple task. The main advantages to such an approach are implementational simplicity and easy generalization to 3 dimensions. Further constraints can be implemented using the weights on the grid; for example, when planning the path for a car, the weight on edges can reflect the speed limit on the corresponding road.
 This method has been used successfully as a base for motion planning of autonomous vehicles~\cite{grid1, grid2}.
@@ -29,19 +29,21 @@ This method has been used successfully as a base for motion planning of autonomo
 The main problem is choosing the size and shape of the grid. If the spacing between the vertices is too large, the resulting path diverges further from the optimal one, and the algorithm might not find a valid solution in a space with many small obstacles. However, if the spacing is too small, the number of vertices that need to be explored can easily become too large to compute in a reasonable amount of time.
 
 
-\begin{wrapfigure}{r}{0.33\textwidth}
-    \centering
-    \includegraphics[width=0.32\textwidth]{robot_visibility.png}
-  \caption{\\Shortest path on a visibility graph.}\label{fig:vis}
-\end{wrapfigure}
+\begin{figure}
+  \centering
+  \begin{minipage}{0.8\textwidth}
+  \includegraphics[width=0.5\textwidth]{robot_visibility.png}
+  \includegraphics[width=0.5\textwidth]{robot_visibility_ext.png}
+  %\caption{Shortest path on a widened visibility graph.}%\label{fig:vis_ext}
+  \end{minipage}
+  \caption{Shortest path on a visibility graph, before and after widening obstacles.}\label{fig:vis}
+\end{figure}
 
 In an effort to reduce the size of our graph and thereby speed up the graph-based path planning methods, visibility graphs have been suggested. To construct a visibility graph, obstacles in the workspace need to be approximated with polygons of choice. The corners of these polygons become the vertices of our graph. Two vertices are connected with an edge if they see each other in the intuitive sense: there is no obstacle on the direct line between them. Each edge is assigned weight corresponding to the euclidean distance of the vertices. Then, standard shortest path algorithms are computed on the graph.
 
-\begin{wrapfigure}{l}{0.33\textwidth}
-    \centering
-    \includegraphics[width=0.32\textwidth]{robot_visibility_ext.png}
-  \caption{\\Shortest path on a widened visibility graph.}\label{fig:vis_ext}
-\end{wrapfigure}
+% \begin{figure}
+%     \centering
+% \end{figure}
 
 As we can see in Figure~\ref{fig:vis}, the basic method can find impossible paths, since it does not account for the size of the robot. The way to mitigate this problem is to extend the size of each obstacle with respect the size and movement limitations of our robot; in the simplified problem, simply expanding each obstacle by the robot's radius is enough. The advantage to this approach is that we can reduce the size of the graph and still find paths close to optimal in the 2D path planning problem. A dynamic extension has also been suggested~\cite{DVG}, which makes the algorithm more flexible in changing environments.
 
@@ -61,28 +63,27 @@ The disadvantage to using this algorithm is that a suitable heuristic can be har
 With a precise enough representation of space, graph-based solutions can give us certain guarantees on the optimality of the path. However, discretizing a continuous space can take a lot of memory and computational time.
 If we relax the requirement of exploring the whole space and look for faster algorithms that provide \enquote{good enough} solutions, we can move away from graph-based approaches. Gradient based approaches make local decisions based on some criteria, and iteratively move towards the target. Among these, a path planning algorithm that stands out is the Artificial Potential Field (APF) method.
 
-\begin{wrapfigure}{r}{0.33\textwidth}
-    \centering
-    \includegraphics[width=0.32\textwidth]{robot_apf.png}
-  \caption{\\Path found by the APF algorithm.}\label{fig:apf}
-\end{wrapfigure}
 
-Intuitively, objects in the APF algorithm act on our robot as magnets. The target attracts our robot with a strong force, while the obstacles repulse the robot. In an ideal scenario, this results in finding a smooth path to the target while avoiding obstacles. This algorithm is highly efficient, and can be extended to various problems. Besides its low cost, one of the main advantages is that the algorithm can quickly react to a changing environment, which makes it more flexible in dynamic environments compared to the graph-based methods.
+Intuitively, objects in the APF algorithm act on our robot as magnets. The target attracts our robot with a strong force, while the obstacles repulse the robot. In an ideal scenario, this results in finding a smooth path to the target while avoiding obstacles, see~\ref{fig:apf}. This algorithm is highly efficient, and can be extended to various problems. Besides its low cost, one of the main advantages is that the algorithm can quickly react to a changing environment, which makes it more flexible in dynamic environments compared to the graph-based methods.
 
-\begin{wrapfigure}{l}{0.33\textwidth}
-    \centering
-    \includegraphics[width=0.32\textwidth]{robot_apf_min.png}
-  \caption{\\Local minimum in APF algorithm.}\label{fig:apf_min}
-\end{wrapfigure}
+\begin{figure}[ht]
+  \centering
+  \begin{minipage}{0.8\textwidth}
+    \includegraphics[width=0.5\textwidth]{robot_apf.png}
+    \includegraphics[width=0.5\textwidth]{robot_apf_min.png}
+  \end{minipage}
+  \caption{APF finds smooth paths, but is susceptible to local minima.}\label{fig:apf}
+\end{figure}
 
 There are two main downsides to the algorithm. For one, it gives us no guarantees on the optimality of the found path; but even worse than that, the basic version is susceptible to local minima. Some authors suggest extensions that help the robot get around obstacles~\cite{apf, apf2}, while another common use for the algorithm is to plan a global path using a graph-based method and use APF to make local decisions and move between the found points~\cite{hybrid}. Since this method can easily be generalised to more dimensions, it is quite relevant in today's research.
+
 
 %\newpage
 The last family of algorithms is based on random sampling. Arguably the most popular method used all throughout motion planning is the Rapidly-exploring Random Tree (RRT) algorithm~\cite{LaValle1998RapidlyexploringRT}. In each iteration of the algorithm, a random point in the space is sampled. Then, an edge is created from the nearest node to the sampled point if a valid path exists between them. Each iteration is very fast, hence the space can easily be sampled millions of times. Once a point that allows reaching the target has been found, the algorithm finishes.
 
-\begin{figure}[h]
+\begin{figure}[ht]
   \centering
-  \includegraphics[width=0.9\textwidth]{robot_rrt.png}
+  \includegraphics[width=\textwidth]{robot_rrt.png}
   \caption{RRT expanding to reach the target.}
 \end{figure}
 

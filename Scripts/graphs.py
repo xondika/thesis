@@ -3,7 +3,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import numpy as np
 
-species = ('1st path', '3rd path', '19th path')
+species = ('1st path', '3rd path', '13th path')
 
 times = {
     'Initialization' : [ 23946, 24185, 144733 ],

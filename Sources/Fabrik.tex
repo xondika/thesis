@@ -7,7 +7,9 @@ As we've established in earlier chapters, having a good algorithm for inverse ki
   \item Finding a path with respect to the end effector with a different method, and using IK to find collision-free positions for the remaining joints. In this case, the priority is speed of computation, since it needs to be recomputed repeatedly.
 \end{itemize}
 
-In either case, the algorithm needs to be extended with a way to respect joint limits, and avoid collisions with surrounding obstacles. Since our aim is to be able to control manipulators with a high DoF, the latter option is more interesting for us.
+Our aim is to be able to control manipulators with a high DoF, the latter option is more interesting for us. The core idea behind this thesis is that we want to plan with respect to the \textit{end effector}, and use an extension of FABRIK to compute manipulator positions along the path. This chapter discusses the two core extensions: first, we add a way for the manipulator to respect joint limits and still find viable solutions. As a specific example, dealing with joints for RoFI manipulators is explained.
+
+Then, we present a simple extension to deal with collisions: upon colliding with an obstacle, we set a limit on the current joint that lets the manipulator get around the obstacle instead. We discuss a standard data structure, called AABB trees, which holds the objects in the workspace and allows us to check for collisions efficiently.
 
 \section{Adding joint limits to FABRIK}
 
@@ -17,7 +19,7 @@ Instead of points in space, we can use a complete kinematic model of our robot. 
 
 Since we want the kinematic model to stay connected, we can no longer easily disconnect the joint from the remainder of the configuration. Instead, a virtual copy of the manipulator is created and rooted at the target position.
 
-This way, the joints of the copy serve as points for the forward reaching stage, and the original joints serve as points for the backward reaching stage. Rather than detaching the current joint and moving it to the desired position, joints are moved at each step to minimize the distance to the same point in the copy, while respecting joint limits.
+This way, the joints of the copy serve as points for the forward reaching stage, and the original joints serve as points for the backward reaching stage. Rather than detaching the current joint and moving it to the desired position, joints are moved at each step to minimize the distance to the same joint in the copy, while respecting joint limits.
 
 \begin{figure}
   \centering
@@ -35,7 +37,7 @@ As the two iterations alter, the two kinematic models converge to each other. Si
 
 In each iteration, finding the right parameters for the current joint can be done by expressing the desired position in spherical coordinates~\cite{spherical}.
 
-Spherical coordinates are an alternative way to describe points in space, different from the standard cartesian $x, y, z$ coordinates. In a spherical coordinate system, each point is uniquely described as $(r, \theta, \phi)$, where $r$ is the radial distance, which is any nonnegative number; $\theta$ is the azimuth angle, standardly ranging $0 \leq \theta < 2\pi$ and $\phi$ is the polar angle, standardly ranging $0 \leq \phi \leq \pi$. The limits are flexible, and we can change them to better match the possible joint rotations. For instance the polar angle can also range $-\pi \le \theta < \pi$, in which case the same points will be expressed slightly differently.
+Spherical coordinates are an alternative way to describe points in space, different from the standard cartesian $x, y, z$ coordinates. In a spherical coordinate system, each point is uniquely described as $(r, \theta, \phi)$, where $r$ is the radial distance, which is any nonnegative number; $\theta$ is the azimuth angle, standardly ranging $0 \leq \theta < 2\pi$ and $\phi$ is the polar angle, standardly ranging $0 \leq \phi \leq \pi$. The limits are flexible, and we can change them to better match the possible joint rotations. For instance, the polar angle can also range $-\pi \le \theta < \pi$, in which case the same points will be expressed slightly differently.
 
 Using the inverse transformation matrix of our current joint, we can express the desired position in cartesian coordinates with respect to the joint. Then, the position can be converted to polar coordinates using the following equations:
 \begin{equation}
@@ -70,28 +72,28 @@ The optimal way to extend FABRIK to deal with this problem depends heavily on th
 
 Think back to the joints of the universal module (\ref{fig:um_rot}). Rotation along the module's X axis is accomplished by the $\alpha$ and $\beta$ joints, while rotation around Z corresponds to the $\gamma$ joint. The right angles are, as mentioned earlier, computed by fitting spherical coordinates to the possible movements of the joints: the azimuth angle (in radians) is clamped to $-\pi \le \theta < \pi$ to fit the $360\degree$ revolute Z joint, while the polar angle (in radians) is clamped to $-\frac{\pi}{2} \le \phi \le \frac{\pi}{2}$ to fit the $\left[-90\degree, 90\degree\right]$ X axis joint.
 
-\begin{wrapfigure}{r}{0.5\textwidth}
+\begin{figure}[ht]
   \centering
   \begin{minipage}{0.5\textwidth}
     \includegraphics[width=0.25\textwidth]{single_straight.png}
     \includegraphics[width=0.4\textwidth]{single_alpha.png}
     \includegraphics[width=0.3\textwidth]{single_gamma.png}
   \end{minipage}
-  \caption{Movement of the $\alpha$ joint changes the next body's position, but $\gamma$ doesn't.}
-\end{wrapfigure}
+  \caption{Movement of the $\alpha$ joint changes the next body's position, but $\gamma$ doesn't.}\label{fig:module_rot}
+\end{figure}
 
-When adapting the FABRIK algorithm to RoFI arms, we can treat each module as two joints. The joint between the two parts of a single module can only utilise the $\alpha$ or $\beta$ joint, hence, it is a simple rotational joint. As far as position of the next joint is concerned, the rotation of the $\gamma$ joint makes no difference.
+When adapting the FABRIK algorithm to RoFI arms, we can treat each module as two joints. The joint between the two parts of a single module can only utilise the $\alpha$ or $\beta$ joint, hence, it is a simple rotational joint. As far as position of the next joint is concerned, the rotation of the $\gamma$ joint makes no difference, see Figure~\ref{fig:module_rot}.
 
-\begin{wrapfigure}{l}{0.4\textwidth}
+\begin{figure}[ht]
   \centering
   \begin{minipage}{0.4\textwidth}
     \includegraphics[width=0.35\textwidth]{double.png}
     \includegraphics[width=0.45\textwidth]{double_rot.png}
   \end{minipage}
-  \caption{Both $\beta$ and $\gamma$ joints influence the position of the next joint.}
-\end{wrapfigure}
+  \caption{Both $\beta$ and $\gamma$ joints influence the position of the next joint.}\label{fig:intermodule_rot}
+\end{figure}
 
-On the other hand, the joint between a universal module and the next component can utilise the $\gamma$ joint. As a result, the module can combine the two joints on the respective side -- each of which moves around a single axis -- to work as a ball joint and rotate in any direction. Passive modules or modules connected in a different direction can simply be viewed as a longer body between joints, and are not interesting for the algorithm.
+On the other hand, the joint between a universal module and the next component can utilise the $\gamma$ joint. As a result, the module can combine the two joints on the respective side -- each of which moves around a single axis -- to work as a ball joint and rotate in any direction, see Figure~\ref{fig:intermodule_rot}. Passive modules or modules connected in a different direction can simply be viewed as a longer body between joints, and are not interesting for the algorithm.
 
 The first idea that comes to mind when trying to deal with joints that have limited rotation may be to minimize the distance to the target joint position within the current limits. This is insufficient; if no special care is taken to account for joints that only have a single DoF, the manipulator will generally not reach the target.
 
@@ -103,37 +105,48 @@ The first idea that comes to mind when trying to deal with joints that have limi
 
 The correct way to approach the problem is to align the one-dimensional joint in a way with the next target, so that only having one DoF is not limiting. The extension that our implementation of FABRIK brings is that at each joint, it no longer looks at the current target, but the joint that supercedes it as well. Looking at the transformation created by the connection, the two DoF joint uses its mobility to place the next joint on the same plane as the target joint that follows it. As a result, the single DoF joint only needs to make a transformation in one plane, and the algorithm finds viable solutions to the constrained IK problem.
 
-Since modules can be connected in varying ways, we need to consider how the transformation created by the joint connection will affect the following joints, and adjust the algorithm accordingly:
+Since modules can be connected in varying ways, we need to consider how the transformation created by the joint connection will affect the following joints, and adjust the algorithm accordingly (to view the various joint types, see Figure~\ref{fig:connections}):
 
-\begin{figure}[h]
+\begin{itemize}
+\item [(a)] Joint between parts of the same module: perform rotation along the X axis with respect to the current target.
+\item [(b)] Joint with Z-Z connection: perform rotation along the X axis with respect to the current target, rotation along the Z axis with respect to the following target. This way, the $\gamma$ joint of the current module helps align the next joint with its target, so that the following one-DoF joint is sufficient to deal with the target.
+\item [(c)] Joint with Z-X connection: perform rotation along the X and Z axes with respect to the current target. In this case, determining the plane along which the next joint will move is a bit tricky, hence, we let the adjacent joints align the module properly.
+\item [(d)] Joint with X-Z connection: perform rotation along Z with respect to the position of the current target, rotation along the X axis with respect to the following target to align the next joint
+\item [(e)] Joint with X-X connection: perform rotation along Z with respect to the position of the current target. Since the X axes of the current and next module are aligned, the joint on the X axis is not considered. It could be used to treat the two X joints as one with extended range, but in early testing, it had no impact on the algorithm's capability to find a solution.
+
+\end{itemize}
+
+\begin{figure}[ht]
   \centering
-  \includegraphics[width=0.2\textwidth]{connections_alpha.png}
-  \caption{Joint between parts of the same module: perform rotation along the X axis with respect to the current target.}
+  \begin{subfigure}{0.3\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{connections_alpha.png}
+    \caption{Joint between parts of the same module}
+  \end{subfigure}
+  \begin{subfigure}{0.3\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{connections_zz.png}
+    \caption{Joint with Z-Z connection}
+  \end{subfigure}
+  \begin{subfigure}{0.3\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{connections_zx.png}
+    \caption{Joint with Z-X connection}
+  \end{subfigure}
+
+  \begin{subfigure}{0.3\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{connections_xz.png}
+    \caption{Joint with X-Z connection}
+  \end{subfigure}
+  \begin{subfigure}{0.3\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{connections_xx.png}
+    \caption{Joint with X-X connection}
+  \end{subfigure}
+  \caption{Possible joint connections}\label{fig:connections}
 \end{figure}
 
-\begin{figure}[h]
-  \centering
-  \includegraphics[width=0.13\textwidth]{connections_zz.png}
-  \caption{Joint with Z-Z connection: perform rotation along the X axis with respect to the current target, rotation along the Z axis with respect to the following target. This way, the $\gamma$ joint of the current module helps align the next joint with its target, so that the following one-DoF joint is sufficient to deal with the target.}
-\end{figure}
-
-\begin{figure}[h]
-  \centering
-  \includegraphics[width=0.2\textwidth]{connections_zx.png}
-  \caption{Joint with Z-X connection: perform rotation along the X and Z axes with respect to the current target. In this case, determining the plane along which the next joint will move is a bit tricky, hence, we let the adjacent joints align the module properly.}
-\end{figure}
-
-\begin{figure}[h]
-  \centering
-  \includegraphics[width=0.28\textwidth]{connections_xz.png}
-  \caption{Joint with X-Z connection: perform rotation along Z with respect to the position of the current target, rotation along the X axis with respect to the following target to align the next joint.}
-\end{figure}
-
-\begin{figure}[h]
-  \centering
-  \includegraphics[width=0.2\textwidth]{connections_xx.png}
-  \caption{Joint with X-X connection: perform rotation along Z with respect to the position of the current target. Since the X axes of the current and next module are aligned, the joint on the X axis is not considered. It could be used to treat the two X joints as one with extended range, but in early testing, it had no impact on the algorithm's capability to find a solution.}
-\end{figure}
 
 \clearpage
 
@@ -143,7 +156,7 @@ When discussing collision avoidance, the first question to ask is how to model t
 
 For the moment, we will assume that the information about the workspace is complete; we know where all the objects are at the time we start the computation, and we have a complete model of the environment, created by a human or generated using an external camera.
 
-One method for extending FABRIK with collision avoidance is presented here~\cite{fabrikAvoidance}. The authors propose that whenever a joint would be put in a position that causes a collision, the joint is put on a line between the current target and base of the arm, rather than the line between the current position and target. Then, if there is still a collision, a series of random rotations is used to avoid the obstacle.
+One method for extending FABRIK with collision avoidance is presented in~\cite{fabrikAvoidance}. The authors propose that whenever a joint would be put in a position that causes a collision, the joint is put on a line between the current target and base of the arm, rather than the line between the current position and target. Then, if there is still a collision, a series of random rotations is used to avoid the obstacle.
 
 If we were to compute IK only once, this method could prove useful. The method finds ways both around and between obstacles, and produces realistic poses. However, there are a few drawbacks:
 
@@ -162,7 +175,7 @@ During the backward reaching stage, the resulting position needs to be feasible.
 
 If the computed movement would cause a collision, a local limit is set on the current joint. A new joint rotation is computed within the limits set by nearby obstacles, and as a result, the manipulator gets as close to the desired position as possible, while avoiding a collision. The whole procedure is illustrated in Figure~\ref{fig:coll}.
 
-\begin{figure}[h]
+\begin{figure}
     \centering
     \begin{subfigure}{.24\textwidth}
       \includegraphics[width=0.9\textwidth]{coll_target.png}
@@ -218,9 +231,9 @@ A common heuristic for choosing where to insert the new leaf is to descend the t
 
 The payoff for building the data structure in this way is efficient lookup. When we need to check if a shape would collide with any other shape already in the structure, we do not need to compare it to every leaf. Instead, collision lookup proceeds from the root and only enters nodes with bounding boxes that collide with our shape. If the shape does not collide with either of the bounding boxes, we know that it does not collide with the leaves either, as the leaf shapes are contained within the nodes by definition. If it does collide with a bounding box, we check for the children, potentially getting to leaf nodes. Then, finally, collision with the actual object is checked.
 
-\begin{wrapfigure}{r}{0.4\textwidth}
+\begin{wrapfigure}{r}{0.32\textwidth}
   \centering
-  \includegraphics[width=0.4\textwidth]{degenerate.png}
+  \includegraphics[width=0.3\textwidth]{degenerate.png}
   \caption{When objects are aligned and added one by one, a degenerate tree can be created.}
 \end{wrapfigure}
 
