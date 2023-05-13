@@ -1,13 +1,13 @@
 \chapter{Extending FABRIK}
 
-As we've established in earlier chapters, having a good algorithm for inverse kinematics can be a helpful tool for motion planning of robotic manipulators. It can be used in two ways:
+As established in earlier chapters, having a good algorithm for inverse kinematics can be a helpful tool for motion planning of robotic manipulators. It can be used in two ways:
 
 \begin{itemize}
   \item Finding joint parameters that allow the manipulator to reach the target, and then looking for a way to reach the position with i.e. RRT.\ In this case, we don't mind if the IK algorithm is slow, since we are only computing it once. However, we want guarantees that a solution is found, if one exists.
   \item Finding a path with respect to the end effector with a different method, and using IK to find collision-free positions for the remaining joints. In this case, the priority is speed of computation, since it needs to be recomputed repeatedly.
 \end{itemize}
 
-Our aim is to be able to control manipulators with a high DoF, the latter option is more interesting for us. The core idea behind this thesis is that we want to plan with respect to the \textit{end effector}, and use an extension of FABRIK to compute manipulator positions along the path. This chapter discusses the two core extensions: first, we add a way for the manipulator to respect joint limits and still find viable solutions. As a specific example, dealing with joints for RoFI manipulators is explained.
+Since our aim is to be able to control manipulators with a high DoF, the latter option is more interesting for us. The core idea behind this thesis is that we want to plan with respect to the \textit{end effector}, and use an extension of FABRIK to compute manipulator positions along the path. This chapter discusses the two core extensions: first, we add a way for the manipulator to respect joint limits and still find viable solutions. As a specific example, dealing with joints for RoFI manipulators is explained.
 
 Then, we present a simple extension to deal with collisions: upon colliding with an obstacle, we set a limit on the current joint that lets the manipulator get around the obstacle instead. We discuss a standard data structure, called AABB trees, which holds the objects in the workspace and allows us to check for collisions efficiently.
 
@@ -54,9 +54,9 @@ Using the inverse transformation matrix of our current joint, we can express the
 If the current joint allows for extension, we can extend or retract it to the correct radial distance. Rotations can be adjusted according to the two angles.
 
 The most straightforward way to enforce that the joint limits are respected is to simply clamp the computed angles. If the algorithm computes an angle outside the range of the current joint,
-the joint is instead set to the nearest feasible angle.
+the joint is instead set to the nearest feasible angle (Figure~\ref{fig:break}).
 
-\begin{figure}[h]
+\begin{figure}[ht]
     \centering
     \includegraphics[width=0.95\textwidth]{limit.png}
     \caption{The computed position violates the joint limit; the actual joint is clamped~\cite{Ondika2021thesis}.}\label{fig:break}
@@ -70,7 +70,7 @@ The optimal way to extend FABRIK to deal with this problem depends heavily on th
 
 \section{Limits of RoFI manipulators}
 
-Think back to the joints of the universal module (\ref{fig:um_rot}). Rotation along the module's X axis is accomplished by the $\alpha$ and $\beta$ joints, while rotation around Z corresponds to the $\gamma$ joint. The right angles are, as mentioned earlier, computed by fitting spherical coordinates to the possible movements of the joints: the azimuth angle (in radians) is clamped to $-\pi \le \theta < \pi$ to fit the $360\degree$ revolute Z joint, while the polar angle (in radians) is clamped to $-\frac{\pi}{2} \le \phi \le \frac{\pi}{2}$ to fit the $\left[-90\degree, 90\degree\right]$ X axis joint.
+Think back to the joints of the universal module (Figure~\ref{fig:um_joints}). Rotation along the module's X axis is accomplished by the $\alpha$ and $\beta$ joints, while rotation around Z corresponds to the $\gamma$ joint. The right angles are, as mentioned earlier, computed by fitting spherical coordinates to the possible movements of the joints: the azimuth angle (in radians) is clamped to $-\pi \le \theta < \pi$ to fit the $360\degree$ revolute Z joint, while the polar angle (in radians) is clamped to $-\frac{\pi}{2} \le \phi \le \frac{\pi}{2}$ to fit the $\left[-90\degree, 90\degree\right]$ X axis joint.
 
 \begin{figure}[ht]
   \centering
@@ -177,26 +177,26 @@ If the computed movement would cause a collision, a local limit is set on the cu
 
 \begin{figure}
     \centering
-    \begin{subfigure}{.24\textwidth}
+    \begin{subfigure}[t]{.24\textwidth}
       \includegraphics[width=0.9\textwidth]{coll_target.png}
-      \caption{Initial position and target.}
+      \caption{Initial position and target}
     \end{subfigure}
-    \begin{subfigure}{0.24\textwidth}
+    \begin{subfigure}[t]{0.24\textwidth}
       \includegraphics[width=0.9\textwidth]{coll_invalid.png}
-      \caption{Solution from the first backward reaching stage.}
+      \caption{Solution from the first backward reaching stage}
     \end{subfigure}
-    \begin{subfigure}{.24\textwidth}
+    \begin{subfigure}[t]{.24\textwidth}
       \includegraphics[width=0.9\textwidth]{coll_fixed.png}
-      \caption{Collision is avoided by clamping the angle, but the target is not reached.}
+      \caption{Collision is avoided by clamping the angle}
     \end{subfigure}
-    \begin{subfigure}{.24\textwidth}
+    \begin{subfigure}[t]{.24\textwidth}
       \includegraphics[width=0.9\textwidth]{coll_final.png}
-      \caption{Final solution after a few iterations.}
+      \caption{Final solution after a few iterations}
     \end{subfigure}
-    \caption{Illustration of FABRIK with simple collision avoidance.}\label{fig:coll}
+    \caption{Illustration of FABRIK with simple collision avoidance}\label{fig:coll}
 \end{figure}
   
-Note that compared to the aforementioned collision avoidance method, this one only works locally for each joint. As a result, it can get stuck in a local minimum, and not get over an obstacle. This is a disadvantage if we wanted to use it to immediately find a final solution; the algorithm could fail even though a solution exists. On the other hand, this behavior is desirable if we are using it to repeatedly compute incremental changes; the manipulator doesn't jump over obstacles when the actual movement is not directly possible. Additionally, the current joint does not need complete knowledge of the environment which saves computational time, and we don't need to rely on randomness which guarantees faster convergence.
+Note that compared to the aforementioned collision avoidance method, this one only works locally for each joint. As a result, it can get stuck in a local minimum, and not get over an obstacle. This is a disadvantage if we wanted to use it to immediately find a final solution; the algorithm could fail even though a solution exists. On the other hand, this behavior is desirable if we are using it to repeatedly compute incremental changes; the manipulator does not jump over obstacles when the actual movement is not possible. Additionally, the current joint does not need complete knowledge of the environment which saves computational time, and we don't need to rely on randomness which guarantees faster convergence.
 
 As of now, we need to compare the new joint position with each other joint and each surrounding object in the workspace. Since other joints and obstacles are approximated with spheres, the collision check is very cheap: if the centers of two spheres are closer than the sum of their radii, the two spheres collide. However, checking every object is clearly asymptotically inefficient. Analog to doing lookup of strings or numbers in binary search trees, we would like to store our shapes in a structure that allows lookup with a logarithmic amount of comparisons.
 
@@ -243,6 +243,6 @@ Now, how do we apply these trees to our problem? Assuming we already have a mode
 
 Recall that in each backward iteration of FABRIK, we want to check if the current joint can be placed at the computed position. The invariant of our algorithm is that each joint has a corresponding sphere in the AABB, and the kinematic model of the manipulator has a pointer to it.
 
-Therefore, we extend the backward FABRIK iterations by first erasing the joint leaves from the AABB. Then, when we compute a position for the joint, we check if it causes a collision with AABB lookup. If it does, we readjust it accordingly. When a reachable position for the joint is found, the joint is fixed for the remainder of the iteration, and the corresponding sphere is reinserted into the AABB. While it may seem that we've done a lot of unnecessary work, we can now guarantee that none of the joints will collide with other parts of the manipulator, or any static obstacle, without exhaustively checking all of them.
+Therefore, we extend the backward FABRIK iterations by first erasing the joint leaves from the AABB. Then, when we compute a position for the joint, we check if it causes a collision with AABB lookup. If it does, we readjust it accordingly. When a reachable position for the joint is found, the joint is fixed for the remainder of the iteration, and the corresponding sphere is reinserted into the AABB. While it may seem that we have done a lot of unnecessary work, we can now guarantee that none of the joints will collide with other parts of the manipulator, or any static obstacle, without exhaustively checking all of them.
 
 The difference may not be felt when all the obstacles are spheres, but it is particularly noticeable when we generalise obstacles to arbitrary shapes. Then, a collision check can be quite an expensive operation, and avoiding unnecessary checks with cheap bounding box comparisons can save a lot of computational time.

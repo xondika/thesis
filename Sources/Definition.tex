@@ -9,7 +9,7 @@ To start, we need to establish terminology and preliminary knowledge. Throughout
 \end{wrapfigure}
 
 
-Robotic manipulators are programmable mechanical devices, typically fixed in place. They are responsible for moving objects or tools and performing various tasks. They are widely used in factories for mass production of vehicles, electronics, etc. Based on the equipment of the specific manipulator, it can move objects from one assembly line to another, cut things, or solder parts together. However, such manipulators are often tailored to perform one specific motion repeatedly, thus, they will not be the focus of this work.
+Robotic manipulators are programmable mechanical devices, typically fixed in place. They are responsible for moving objects or tools and performing various tasks. They are widely used in factories for mass production of vehicles, electronics, etc. Based on the equipment of the specific manipulator, it can move objects from one assembly line to another, cut things, or solder parts together. However, industrial manipulators are often tailored to perform one specific motion repeatedly, thus, they will not be the focus of this work.
 
 Manipulators consist of solid bodies, linked via movable joints. They often resemble human arms, although the specific shapes vary wildly.
 
@@ -162,7 +162,7 @@ Knowing the transformation matrix of a specific joint allows us to easily comput
 
 Since the movements of traditional joints can easily be represented as a combination of the two rotations and translations, we consider the forward kinematics of robotic manipulators a solved problem.
 
-\newpage
+% \newpage
 
 \begin{wrapfigure}{r}{0.25\textwidth}
     \centering
@@ -179,7 +179,7 @@ Common methods for solving inverse kinematics view the problem as an optimizatio
 The methods most discussed in literature are based on approximating the inversion of a Jacobian matrix. For robotic manipulators, the Jacobian matrix is a matrix of partial derivatives at each joint. The size of the matrix is $m \times n$, where $m$ corresponds to the target dimension (6 for the 3D problem of reaching a target) and $n$ corresponds to the degrees of freedom.
 The Jacobian matrix provides us with a linear approximation of how the end effector is going to move when slight changes in the joint positions are made. Hence, if we could invert this matrix, we would get an estimation of how to move the joints in order to move the end effector closer to the target. Then, by iteratively repeating this process, we could obtain a solution. However, the Jacobian matrix generally does not have an inversion; the matrix is not square for manipulators with over 6 degrees of freedom, and even then, the determinant is not guaranteed to be nonzero.
 
-There are many methods that try to approximate the inverse, most notably the Moore-Penrose inverse, known as the matrix pseudoinverse~\cite{penrose_1955}. This matrix serves as the generalisation of the matrix inverse, and exists for any matrix. The Jacobian pseudoinverse technique for inverse kinematics was heavily studied, but it suffers from a few fundamental drawbacks. It's hard to incorporate local joint limits, and the method behaves erratically near singularities -- a state where the manipulator is straightened out and slight movement of any joint results in roughly the same change.
+There are many methods that try to approximate the inverse, most notably the Moore-Penrose inverse, known as the matrix pseudoinverse~\cite{penrose_1955}. This matrix serves as the generalisation of the matrix inverse, and exists for any matrix. The Jacobian pseudoinverse technique for inverse kinematics was heavily studied, but it suffers from a few fundamental drawbacks. It is hard to incorporate local joint limits, and the method behaves erratically near singularities -- a state where the manipulator is straightened out and slight movement of any joint results in roughly the same change.
 In addition to that, it is not very efficient, as the Jacobian matrix and its pseudoinverse have to be computed repeatedly in each iteration. A common way to compute the pseudoinverse is using Singular Value Decomposition; the complexity of this method is $\mathcal{O}(mn^2)$~\cite{trefethen1997numerical}, which scales poorly with respect to the degrees of freedom.
 
 Some authors~\cite{Wolovich1984ACT} suggest using the transpose of the Jacobian matrix, rather than the pseudoinverse. This method is faster but less precise, and suffers from many of the same problems. There are many modifications and extensions of these algorithms, but since we are considering high-DoF manipulators, they are not as interesting for us.
@@ -258,28 +258,30 @@ There have been many research projects concerned with modular robots, each with 
 The RoFI platform~\cite{Mrázek2019thesis} is an open source modular robotics project developed at Masaryk University. The project is driven by students and consists of algorithmic research~\cite{Vozárová2019thesis, Zacek2021thesis, Nausova2022thesis, Ondika2021thesis, SMTReconfig}, development of hardware~\cite{Mrázek2019thesis, RoFICoM}, networking~\cite{Chlup2020thesis, Chlup2023thesis} and creating tooling for the development of the robots~\cite{Naušová2019thesis, Svoboda2020thesis}.
 A robot within this platform, which we refer to as RoFIbot, is comprised of various modules. These can connect and disconnect based on the robot's needs, and allow it to change its overall shape.
 
-\begin{wrapfigure}{r}{0.3\textwidth}
-    \centering
-    \includegraphics[width=0.3\textwidth]{um.png}
-  \caption{Build of the universal module~\cite{rofiUm}}\label{fig:um}
-\end{wrapfigure}
+\begin{figure}
+  \centering
+  \begin{subfigure}[t]{0.32\textwidth}
+  \centering
+    \includegraphics[width=\textwidth]{um.png}
+    \caption{Build of the universal module~\cite{rofiUm}}\label{fig:um}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.32\textwidth}
+  \centering
+    \includegraphics[width=\textwidth]{um_joints.png}
+    \caption{Axes of rotation~\cite{rofiUm}}\label{fig:um_joints}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.32\textwidth}
+  \centering
+    \includegraphics[width=\textwidth]{um_connectors.png}
+    \caption{RoFI connectors~\cite{rofiUm}}\label{fig:um_conn}
+  \end{subfigure}
+  \caption{RoFI universal module}
+\end{figure}
 
 The basic building block of each robot within the platform is the universal module. It consists of two symmetrical bodies, wrapped in what we call shoes (see~\ref{fig:um}). The middle part of each module contains the hardware necessary for each module to function as an independent robot in itself. This includes rechargeable batteries to power the whole system, the main processor, which can run user programs, as well as coprocessors that manage firmware. The two bodies are connected to the main unit and perform motion and connection to the other modules.
 
-\begin{wrapfigure}{l}{0.3\textwidth}
-    \centering
-    \includegraphics[width=0.3\textwidth]{um_joints.png}
-  \caption{Rotation axes~\cite{rofiUm}}\label{fig:um_rot}
-\end{wrapfigure}
+Each body has a stepper motor that can turn from $-90$ to $90$ degrees. In our models, we refer to the joints as $\alpha$ and $\beta$. Per DH convention, the rotation is calculated as rotation around the $X$ axis with respect to the module's frame. What separates the design of RoFI modules from previous projects such as M-TRAN is the $\gamma$ joint, which allows unlimited rotation around the middle part of the robot, i.e.\ the $Z$ axis (see~\ref{fig:um_joints}). The existence of this joint means that in combination with one of the other motors, the module can perform rotation in any direction, allowing it to perform more complex motions compared to its predecessors.
 
-Each body has a stepper motor that can turn from $-90$ to $90$ degrees. In our models, we refer to the joints as $\alpha$ and $\beta$. Per DH convention, the rotation is calculated as rotation around the $X$ axis with respect to the module's frame. What separates the design of RoFI modules from previous projects such as M-TRAN is the $\gamma$ joint, which allows unlimited rotation around the middle part of the robot, i.e.\ the $Z$ axis. The existence of this joint means that in combination with one of the other motors, the module can perform rotation in any direction, allowing it to perform more complex motions compared to its predecessors.
-
-\begin{wrapfigure}{r}{0.38\textwidth}
-    \centering
-    \includegraphics[width=0.37\textwidth]{um_connectors.png}
-  \caption{RoFI connectors~\cite{rofiUm}}\label{fig:um_con}
-\end{wrapfigure}
-
-Each shoe has 3 connectors; we identify them via the shoe they're on and the direction they're facing with respect to the body. The connectors are genderless, which allows them to connect with any other connector within the plaform, and they can be retracted when not in use. Each connector is equipped with simple Lidar~\cite{Lidar} sensors. The sensors perodically send out a laser that gets reflected off of nearby objects, which allows them to detect obstacles and estimate their distance based on how quickly the reflection returned. As a result, the modules don't have a full view of their environment, but each can detect nearby obstacles, as well as recognize whether there is another nearby module they can connect to.
+Each shoe has 3 connectors; we identify them via the shoe they are attached to, and the direction they are facing with respect to the body (see~\ref{fig:um_conn}). The connectors are genderless, which allows them to connect with any other connector within the plaform, and they can be retracted when not in use. Each connector is equipped with simple Lidar~\cite{Lidar} sensors. The sensors perodically send out a laser that gets reflected off of nearby objects, which allows them to detect obstacles and estimate their distance based on how quickly the reflection returned. As a result, the modules don't have a full view of their environment, but each can detect nearby obstacles, as well as recognize whether there is another nearby module they can connect to.
 
 Since each module has 3 degrees of freedom and the modules can be connected in various ways, the DoF of a RoFIbot rises very quickly with each module. If we wish to compute motion for the robot as a whole, traditional algorithms\footnote{Which are generally exponential with respect to the DoF, see the next chapter\ref{SotA}.} quickly become computationally infeasible. As one of the goals for this thesis is control of robotic arms comprised of such modules, a simulation within the RoFI platform will be used to demostrate our results.
